@@ -25,6 +25,7 @@ import java.util.Set;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -67,6 +68,7 @@ public class Fish {
     private String description;
 
     @CreationTimestamp
+    @ColumnDefault("now()")
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 

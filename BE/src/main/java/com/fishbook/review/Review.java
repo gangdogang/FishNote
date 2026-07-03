@@ -15,6 +15,7 @@ import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
@@ -51,6 +52,7 @@ public class Review {
     private int helpfulCount = 0;
 
     @CreationTimestamp
+    @ColumnDefault("now()")
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 }
