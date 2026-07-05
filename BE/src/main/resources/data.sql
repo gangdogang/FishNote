@@ -68,30 +68,4 @@ INSERT INTO fish_tip (fish_id, tip_order, content) VALUES
 ON CONFLICT (fish_id, tip_order) DO UPDATE SET
     content = EXCLUDED.content;
 
-INSERT INTO review (id, fish_id, nickname, rating, content, image_url, password_hash, helpful_count, created_at)
-VALUES
-    (1, 1, '회러버', 5, '쫄깃하고 담백해서 처음 먹는 사람에게도 추천해요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 4, now()),
-    (2, 1, '바다사랑', 4, '기본기가 좋은 흰살회라 실패가 적습니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 2, now()),
-    (3, 1, '초장파', 2, '식감은 좋았지만 제 입맛에는 조금 심심했어요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 1, now()),
-    (4, 2, '겨울방어왕', 5, '기름진 맛이 진해서 겨울에 꼭 먹게 됩니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 7, now()),
-    (5, 2, '묵은지한입', 4, '묵은지랑 먹으니 느끼함이 잡혀서 좋았습니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 5, now()),
-    (6, 2, '담백취향', 3, '맛은 진한데 기름기가 많아서 호불호가 있을 듯해요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 0, now()),
-    (7, 3, '매운탕러버', 5, '회도 좋고 남은 뼈로 끓인 매운탕이 특히 좋았어요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 6, now()),
-    (8, 3, '쌈장파', 3, '쫄깃하지만 향이 살짝 강하게 느껴졌습니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 2, now()),
-    (9, 4, '돔좋아', 5, '숙성해서 먹으니 단맛이 확실히 살아났어요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 4, now()),
-    (10, 4, '가성비체크', 2, '맛은 좋지만 가격이 높아서 자주 먹기는 어렵네요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 1, now()),
-    (11, 5, '연어덮밥', 4, '부드럽고 고소해서 덮밥으로 먹기 좋았습니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 3, now()),
-    (12, 5, '훈제보다생', 1, '기름진 맛이 제 취향은 아니었어요.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 0, now()),
-    (13, 6, '지리탕파', 4, '지리탕으로 먹었을 때 국물이 깔끔했습니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 2, now()),
-    (14, 6, '숙성회입문', 3, '깔끔하지만 참돔보다 인상은 약했습니다.', NULL, '$2a$10$7EqJtq98hPqEX7fNZaFWoOhi48WK8khVMqZBqNkYR6zCQXEr1fYZS', 1, now())
-ON CONFLICT (id) DO UPDATE SET
-    fish_id = EXCLUDED.fish_id,
-    nickname = EXCLUDED.nickname,
-    rating = EXCLUDED.rating,
-    content = EXCLUDED.content,
-    image_url = EXCLUDED.image_url,
-    password_hash = EXCLUDED.password_hash,
-    helpful_count = EXCLUDED.helpful_count;
-
 SELECT setval('fish_id_seq', (SELECT MAX(id) FROM fish));
-SELECT setval('review_id_seq', (SELECT MAX(id) FROM review));
