@@ -27,7 +27,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <circle cx="18" cy="17" r="2.4" fill="#0F9488" />
               </svg>
             </span>
-            <span className="text-xl font-bold tracking-[-0.025em] text-ink">FishBook</span>
+            <span className="text-xl font-bold tracking-[-0.025em] text-ink">FishNote</span>
           </Link>
 
           <nav className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
