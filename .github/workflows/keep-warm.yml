@@ -1,0 +1,16 @@
+name: Keep backend warm
+
+# Render 무료 웹서비스는 약 15분간 무접속 시 잠들어, 첫 요청이 30~60초 걸립니다.
+# 10분마다 헬스체크를 호출해 백엔드를 깨어 있게 유지합니다.
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # 10분마다 (UTC 기준이지만 간격은 동일)
+  workflow_dispatch: {}       # 필요하면 수동 실행
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: |
+          curl -fsS --max-time 60 https://fishbook-api-6vit.onrender.com/api/v1/health
