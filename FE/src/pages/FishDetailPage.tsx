@@ -2,9 +2,11 @@ import { Heart } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import FishCard from '../components/FishCard';
+import FishPlaceholder from '../components/FishPlaceholder';
 import ReviewForm from '../components/ReviewForm';
 import ReviewList from '../components/ReviewList';
 import SeasonBar from '../components/SeasonBar';
+import { SeasonBadgeNow } from '../components/SeasonBadge';
 import { formatMonths, formatPriceLabel, formatPriceLevel, isInSeasonNow } from '../lib/format';
 import { getErrorMessage } from '../lib/errors';
 import { useFishDetail } from '../hooks/useFish';
@@ -132,14 +134,7 @@ export default function FishDetailPage() {
             ← 도감으로
           </Link>
 
-          <div className="mb-2 min-h-[26px]">
-            {inSeasonNow ? (
-              <span className="inline-flex items-center gap-[5px] rounded-full bg-sea px-2.5 py-[3px] text-xs font-bold text-white">
-                <span className="h-[5px] w-[5px] rounded-full bg-white" aria-hidden />
-                지금 제철
-              </span>
-            ) : null}
-          </div>
+          <div className="mb-2 min-h-[26px]">{inSeasonNow ? <SeasonBadgeNow /> : null}</div>
 
           <div className="mb-2.5">
             <h1 className="m-0 text-[26px] font-extrabold leading-tight tracking-normal text-ink">{fish.name}</h1>
@@ -229,7 +224,7 @@ export default function FishDetailPage() {
           <h2 className="m-0 mb-3.5 text-[19px] font-extrabold tracking-normal text-ink">비슷한 생선</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {fish.similarFishes.map((similar) => (
-              <FishCard key={similar.id} fish={similar} compact />
+              <FishCard key={similar.id} fish={similar} />
             ))}
           </div>
         </section>
@@ -366,7 +361,7 @@ function RatingDistributionBars({ distribution }: { distribution: RatingDistribu
 }
 
 function StateText({ text }: { text: string }) {
-  return <main className="mx-auto max-w-[980px] px-4 py-12 text-center text-slate-500 sm:px-6">{text}</main>;
+  return <main className="mx-auto max-w-[980px] px-4 py-12 text-center text-ink-mute sm:px-6">{text}</main>;
 }
 
 function RatingStars({ rating, className = '' }: { rating: number; className?: string }) {
@@ -380,12 +375,3 @@ function RatingStars({ rating, className = '' }: { rating: number; className?: s
   );
 }
 
-function FishPlaceholder({ className }: { className: string }) {
-  return (
-    <svg viewBox="0 0 64 40" fill="none" strokeWidth="1.6" className={className} aria-hidden>
-      <path d="M2 20 C16 3, 42 3, 52 20 C42 37, 16 37, 2 20 Z" />
-      <path d="M50 20 L63 9 L63 31 Z" />
-      <circle cx="18" cy="17" r="2" />
-    </svg>
-  );
-}

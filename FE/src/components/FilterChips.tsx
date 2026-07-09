@@ -1,13 +1,5 @@
+import { SEASONS, TASTE_TAGS } from '../lib/filters';
 import type { Season } from '../types/fish';
-
-const seasons: Array<{ value: Season; label: string }> = [
-  { value: 'spring', label: '봄' },
-  { value: 'summer', label: '여름' },
-  { value: 'fall', label: '가을' },
-  { value: 'winter', label: '겨울' },
-];
-
-const tastes = ['담백', '기름진', '쫄깃', '고소'];
 
 interface FilterChipsProps {
   season?: Season;
@@ -24,7 +16,7 @@ export default function FilterChips({ season, taste, onSeasonChange, onTasteChan
   return (
     <div className={['flex flex-wrap items-center gap-2', className].join(' ')}>
       <div className="flex flex-wrap gap-2">
-        {seasons.map((item) => (
+        {SEASONS.map((item) => (
           <button
             key={item.value}
             type="button"
@@ -38,7 +30,7 @@ export default function FilterChips({ season, taste, onSeasonChange, onTasteChan
       </div>
       <span className="mx-0.5 hidden h-8 w-px bg-line sm:block" aria-hidden />
       <div className="flex flex-wrap gap-2">
-        {tastes.map((item) => (
+        {TASTE_TAGS.map((item) => (
           <button
             key={item}
             type="button"
@@ -63,7 +55,7 @@ export default function FilterChips({ season, taste, onSeasonChange, onTasteChan
   );
 }
 
-function chipClass(active: boolean) {
+export function chipClass(active: boolean) {
   return [
     'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-[13px] py-[5px] text-[13px] font-semibold transition duration-150',
     active

@@ -1,18 +1,13 @@
 import { useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { chipClass } from '../components/FilterChips';
 import FishCard from '../components/FishCard';
+import FishPlaceholder from '../components/FishPlaceholder';
+import StateText from '../components/StateText';
 import { useFishList } from '../hooks/useFish';
+import { SEASONS, TASTE_TAGS } from '../lib/filters';
 import { formatPriceLevel } from '../lib/format';
 import type { FishSort, Season } from '../types/fish';
-
-const seasons: Array<{ value: Season; label: string }> = [
-  { value: 'spring', label: '봄' },
-  { value: 'summer', label: '여름' },
-  { value: 'fall', label: '가을' },
-  { value: 'winter', label: '겨울' },
-];
-
-const tastes = ['담백', '기름진', '쫄깃', '고소'];
 
 const months = Array.from({ length: 12 }, (_, index) => index + 1);
 
@@ -38,7 +33,7 @@ export default function SearchPage() {
   const { data: fishes = [], isLoading, isError } = useFishList(params);
   const activeFilterPills = [
     params.search ? { key: 'search', label: params.search } : undefined,
-    params.season ? { key: 'season', label: seasons.find((season) => season.value === params.season)?.label ?? params.season } : undefined,
+    params.season ? { key: 'season', label: SEASONS.find((season) => season.value === params.season)?.label ?? params.season } : undefined,
     params.taste ? { key: 'taste', label: params.taste } : undefined,
     params.month ? { key: 'month', label: `${params.month}월 제철` } : undefined,
     params.priceLevel ? { key: 'priceLevel', label: priceLevels.find((price) => price.value === params.priceLevel)?.label ?? String(params.priceLevel) } : undefined,
@@ -74,7 +69,7 @@ export default function SearchPage() {
           </div>
 
           <FilterGroup label="제철">
-            {seasons.map((season) => (
+            {SEASONS.map((season) => (
               <FilterChip
                 key={season.value}
                 active={params.season === season.value}
@@ -98,7 +93,7 @@ export default function SearchPage() {
           </FilterGroup>
 
           <FilterGroup label="맛">
-            {tastes.map((taste) => (
+            {TASTE_TAGS.map((taste) => (
               <FilterChip key={taste} active={params.taste === taste} onClick={() => update({ taste: params.taste === taste ? undefined : taste })}>
                 {taste}
               </FilterChip>
@@ -181,33 +176,18 @@ function FilterGroup({ label, children, className = 'mb-5' }: { label: string; c
 
 function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active
-          ? 'inline-flex items-center justify-center gap-1 rounded-full bg-sea px-[13px] py-[5px] text-[13px] font-semibold text-white transition'
-          : 'inline-flex items-center justify-center rounded-full bg-chipbg px-[13px] py-[5px] text-[13px] font-semibold text-ink transition hover:text-sea'
-      }
-    >
+    <button type="button" onClick={onClick} className={chipClass(active)}>
       {children}
       {active ? <span aria-hidden>✕</span> : null}
     </button>
   );
 }
 
-function StateText({ text }: { text: string }) {
-  return <div className="rounded-card border border-line bg-white p-8 text-center text-ink-mute">{text}</div>;
-}
-
 function EmptyState({ onReset }: { onReset: () => void }) {
   return (
     <div className="rounded-card border border-dashed border-line px-5 py-[72px] text-center">
       <div className="mx-auto mb-5 flex h-[84px] w-[84px] items-center justify-center rounded-full bg-chipbg">
-        <svg viewBox="0 0 64 40" width="46" height="29" fill="none" stroke="#C2C8CC" strokeWidth="1.6" aria-hidden>
-          <path d="M2 20 C16 3, 42 3, 52 20 C42 37, 16 37, 2 20 Z" />
-          <path d="M50 20 L63 9 L63 31 Z" />
-        </svg>
+        <FishPlaceholder className="h-[29px] w-[46px] stroke-ink-mute/40" />
       </div>
       <h3 className="mb-2 text-lg font-bold text-ink">검색 결과가 없어요</h3>
       <p className="mb-5 text-[14.5px] leading-[1.5] text-ink-mute">

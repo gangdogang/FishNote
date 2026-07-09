@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import FishCard from '../components/FishCard';
+import StateText from '../components/StateText';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useFishList } from '../hooks/useFish';
 
@@ -37,10 +38,6 @@ export default function SavedPage() {
       ) : null}
     </main>
   );
-}
-
-function StateText({ text }: { text: string }) {
-  return <div className="rounded-card border border-line bg-white p-8 text-center text-ink-mute">{text}</div>;
 }
 
 function EmptyState() {

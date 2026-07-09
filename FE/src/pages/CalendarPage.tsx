@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import FishCard from '../components/FishCard';
+import StateText from '../components/StateText';
 import { useFishList } from '../hooks/useFish';
 
 const months = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -77,10 +78,6 @@ export default function CalendarPage() {
       ) : null}
     </main>
   );
-}
-
-function StateText({ text }: { text: string }) {
-  return <div className="rounded-card border border-line bg-white p-8 text-center text-ink-mute">{text}</div>;
 }
 
 function EmptyState() {
