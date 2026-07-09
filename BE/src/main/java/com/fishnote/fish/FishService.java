@@ -77,6 +77,13 @@ public class FishService {
         return toDetail(fish);
     }
 
+    public List<FishSummaryResponse> summarizeFishes(List<Fish> fishes) {
+        Map<Long, FishRatingStat> stats = ratingStats(fishes.stream().map(Fish::getId).toList());
+        return fishes.stream()
+                .map(fish -> toSummary(fish, stats.get(fish.getId())))
+                .toList();
+    }
+
     private boolean matchesSearch(Fish fish, String search) {
         if (!StringUtils.hasText(search)) {
             return true;

@@ -27,6 +27,13 @@ CREATE TABLE IF NOT EXISTS users (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS user_bookmark (
+    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    fish_id    BIGINT NOT NULL REFERENCES fish(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, fish_id)
+);
+
 -- 제철 월
 CREATE TABLE IF NOT EXISTS fish_season_month (
     fish_id BIGINT NOT NULL REFERENCES fish(id) ON DELETE CASCADE,
@@ -86,3 +93,4 @@ CREATE INDEX IF NOT EXISTS idx_review_fish ON review(fish_id);
 CREATE INDEX IF NOT EXISTS idx_season_month ON fish_season_month(month);
 CREATE INDEX IF NOT EXISTS idx_taste_tag ON fish_taste_tag(tag);
 CREATE INDEX IF NOT EXISTS idx_fish_name ON fish(name);
+CREATE INDEX IF NOT EXISTS idx_user_bookmark_user_created ON user_bookmark(user_id, created_at);

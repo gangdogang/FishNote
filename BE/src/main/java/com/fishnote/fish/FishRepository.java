@@ -1,5 +1,6 @@
 package com.fishnote.fish;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -17,4 +18,11 @@ public interface FishRepository extends JpaRepository<Fish, Long> {
     @EntityGraph(attributePaths = {"seasonMonths", "tasteTags", "similarFishes"})
     @Query("select f from Fish f where f.id = :id")
     Optional<Fish> findDetailById(@Param("id") Long id);
+
+    @EntityGraph(attributePaths = {"seasonMonths", "tasteTags"})
+    @Query("select distinct f from Fish f where f.id in :ids")
+    List<Fish> findSummariesByIds(@Param("ids") Collection<Long> ids);
+
+    @Query("select f.id from Fish f where f.id in :ids")
+    List<Long> findExistingIds(@Param("ids") Collection<Long> ids);
 }
