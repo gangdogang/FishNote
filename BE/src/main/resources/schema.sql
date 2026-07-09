@@ -80,12 +80,16 @@ CREATE TABLE IF NOT EXISTS review (
     rating     SMALLINT CHECK (rating BETWEEN 1 AND 5),
     content    TEXT NOT NULL,
     image_url  TEXT,
-    password_hash VARCHAR(100) NOT NULL DEFAULT '',
+    password_hash VARCHAR(100),
+    user_id    BIGINT REFERENCES users(id) ON DELETE SET NULL,
     helpful_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE review ADD COLUMN IF NOT EXISTS password_hash VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE review ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE review ALTER COLUMN password_hash DROP DEFAULT;
+ALTER TABLE review ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
 ALTER TABLE review ADD COLUMN IF NOT EXISTS helpful_count INT NOT NULL DEFAULT 0;
 
 -- 인덱스

@@ -10,6 +10,7 @@ public record ReviewResponse(
         String content,
         String imageUrl,
         int helpfulCount,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        boolean mine
 ) {
 }

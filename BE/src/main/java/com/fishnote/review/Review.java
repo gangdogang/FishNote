@@ -1,6 +1,7 @@
 package com.fishnote.review;
 
 import com.fishnote.fish.Fish;
+import com.fishnote.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -17,6 +18,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "review", indexes = @Index(name = "idx_review_fish", columnList = "fish_id"))
@@ -33,6 +36,11 @@ public class Review {
     @JoinColumn(name = "fish_id", nullable = false)
     private Fish fish;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private User user;
+
     @Column(nullable = false, length = 30)
     private String nickname;
 
@@ -45,7 +53,7 @@ public class Review {
     @Column(name = "image_url", columnDefinition = "text")
     private String imageUrl;
 
-    @Column(name = "password_hash", nullable = false, length = 100)
+    @Column(name = "password_hash", length = 100)
     private String passwordHash;
 
     @Column(name = "helpful_count", nullable = false, columnDefinition = "integer default 0")

@@ -2,34 +2,44 @@ package com.fishnote.review;
 
 import com.fishnote.common.ForbiddenException;
 import com.fishnote.common.NotFoundException;
+import com.fishnote.common.UnauthorizedException;
 import com.fishnote.fish.Fish;
 import com.fishnote.fish.FishRepository;
 import com.fishnote.review.dto.ReviewHelpfulResponse;
 import com.fishnote.review.dto.ReviewListResponse;
 import com.fishnote.review.dto.ReviewRequest;
 import com.fishnote.review.dto.ReviewResponse;
+import com.fishnote.user.User;
+import com.fishnote.user.UserRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Service
 public class ReviewService {
 
     private final FishRepository fishRepository;
     private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public ReviewService(FishRepository fishRepository, ReviewRepository reviewRepository, PasswordEncoder passwordEncoder) {
+    public ReviewService(
+            FishRepository fishRepository,
+            ReviewRepository reviewRepository,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder) {
         this.fishRepository = fishRepository;
         this.reviewRepository = reviewRepository;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
-    public ReviewListResponse findReviews(Long fishId, int page, int size, String sort) {
+    public ReviewListResponse findReviews(Long fishId, int page, int size, String sort, Long userId) {
         ensureFishExists(fishId);
         Pageable pageable = PageRequest.of(page, size, reviewSort(sort));
         // 평균·개수는 개별 쿼리 대신 그룹 집계 1회로 (원거리 DB 왕복 최소화)
@@ -42,31 +52,45 @@ public class ReviewService {
                 stat == null ? 0 : stat.getReviewCount(),
                 RatingDistribution.from(reviewRepository.countByRatingForFishId(fishId)),
                 reviewRepository.findAllByFishId(fishId, pageable).stream()
-                        .map(this::toResponse)
+                        .map(review -> toResponse(review, userId))
                         .toList());
     }
 
     @Transactional
-    public ReviewResponse createReview(Long fishId, ReviewRequest request) {
+    public ReviewResponse createReview(Long fishId, ReviewRequest request, Long userId) {
         Fish fish = fishRepository.findById(fishId)
                 .orElseThrow(() -> new NotFoundException("생선을 찾을 수 없습니다."));
+        User user = userId == null ? null : findUser(userId);
 
         Review review = new Review();
         review.setFish(fish);
-        review.setNickname(request.nickname());
         review.setRating(request.rating());
         review.setContent(request.content());
         review.setImageUrl(request.imageUrl());
-        review.setPasswordHash(passwordEncoder.encode(request.password()));
+        if (user == null) {
+            validateAnonymousReview(request);
+            review.setNickname(request.nickname());
+            review.setPasswordHash(passwordEncoder.encode(request.password()));
+        } else {
+            review.setUser(user);
+            review.setNickname(user.getNickname());
+            review.setPasswordHash(null);
+        }
 
-        return toResponse(reviewRepository.save(review));
+        return toResponse(reviewRepository.save(review), userId);
     }
 
     @Transactional
-    public void deleteReview(Long reviewId, String password) {
+    public void deleteReview(Long reviewId, Long userId, String password) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("후기를 찾을 수 없습니다."));
-        if (!passwordEncoder.matches(password, review.getPasswordHash())) {
+        if (isMine(review, userId)) {
+            reviewRepository.delete(review);
+            return;
+        }
+
+        String validPassword = validPassword(password);
+        if (review.getPasswordHash() == null || !passwordEncoder.matches(validPassword, review.getPasswordHash())) {
             throw new ForbiddenException("비밀번호가 일치하지 않습니다.");
         }
         reviewRepository.delete(review);
@@ -86,7 +110,32 @@ public class ReviewService {
         }
     }
 
-    private ReviewResponse toResponse(Review review) {
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new UnauthorizedException("인증이 필요합니다."));
+    }
+
+    private void validateAnonymousReview(ReviewRequest request) {
+        if (!StringUtils.hasText(request.nickname())) {
+            throw new IllegalArgumentException("nickname은 필수입니다.");
+        }
+        if (request.nickname().length() > 30) {
+            throw new IllegalArgumentException("nickname은 30자 이하여야 합니다.");
+        }
+        validPassword(request.password());
+    }
+
+    private String validPassword(String password) {
+        if (!StringUtils.hasText(password)) {
+            throw new IllegalArgumentException("password는 필수입니다.");
+        }
+        if (password.length() < 4 || password.length() > 20) {
+            throw new IllegalArgumentException("password는 4~20자여야 합니다.");
+        }
+        return password;
+    }
+
+    private ReviewResponse toResponse(Review review, Long userId) {
         return new ReviewResponse(
                 review.getId(),
                 review.getFish().getId(),
@@ -95,7 +144,12 @@ public class ReviewService {
                 review.getContent(),
                 review.getImageUrl(),
                 review.getHelpfulCount(),
-                review.getCreatedAt());
+                review.getCreatedAt(),
+                isMine(review, userId));
+    }
+
+    private boolean isMine(Review review, Long userId) {
+        return userId != null && review.getUser() != null && userId.equals(review.getUser().getId());
     }
 
     private Sort reviewSort(String sort) {
