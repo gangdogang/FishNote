@@ -1,5 +1,6 @@
 package com.fishnote.review;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -24,4 +25,12 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
             group by r.rating
             """)
     List<RatingCount> countByRatingForFishId(@Param("fishId") Long fishId);
+
+    @Query("""
+            select r.fish.id as fishId, avg(r.rating) as avgRating, count(r) as reviewCount
+            from Review r
+            where r.fish.id in :fishIds
+            group by r.fish.id
+            """)
+    List<FishRatingStat> findRatingStatsByFishIds(@Param("fishIds") Collection<Long> fishIds);
 }
