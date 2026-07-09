@@ -14,7 +14,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate();
   const { pathname } = location;
   const searchParams = new URLSearchParams(location.search);
-  const showHeaderSearch = pathname !== '/';
   const navClassName = (active: boolean) =>
     active
       ? 'flex-none px-0 py-2 text-sm font-semibold text-sea transition'
@@ -66,17 +65,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </Link>
           </nav>
 
-          {showHeaderSearch ? (
-            <div className="w-full flex-none md:ml-auto md:w-[220px]">
-              <SearchBar
-                key={location.search}
-                initialValue={searchParams.get('search') ?? ''}
-                placeholder="생선 이름 검색"
-                onSubmit={handleHeaderSearch}
-                variant="compact"
-              />
-            </div>
-          ) : null}
+          <div className="w-full flex-none md:ml-auto md:w-[220px]">
+            <SearchBar
+              key={location.search}
+              initialValue={searchParams.get('search') ?? ''}
+              placeholder="생선 이름 검색"
+              onSubmit={handleHeaderSearch}
+              variant="compact"
+            />
+          </div>
         </div>
       </header>
 
