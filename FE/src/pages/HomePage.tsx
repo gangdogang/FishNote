@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import FilterChips from '../components/FilterChips';
 import FishCard from '../components/FishCard';
 import SearchBar from '../components/SearchBar';
-import StateText from '../components/StateText';
+import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import { useFishList } from '../hooks/useFish';
 import type { FishSort, Season } from '../types/fish';
 
@@ -15,16 +15,18 @@ export default function HomePage() {
   const [season, setSeason] = useState<Season | undefined>();
   const [taste, setTaste] = useState<string | undefined>();
   const [sort, setSort] = useState<FishSort>('popular');
-  const { data: fishes = [], isLoading, isError } = useFishList({ season, taste, sort });
+  const { data: fishes = [], isLoading, isError, refetch } = useFishList({ season, taste, sort });
   const {
     data: monthFishes = [],
     isLoading: isMonthLoading,
     isError: isMonthError,
+    refetch: refetchMonth,
   } = useFishList({ month: currentMonth, sort: 'popular' });
   const {
     data: featuredFishes = [],
     isLoading: isFeaturedLoading,
     isError: isFeaturedError,
+    refetch: refetchFeatured,
   } = useFishList({ featured: true, sort: 'popular' });
 
   function goSearch(search?: string) {
@@ -68,9 +70,11 @@ export default function HomePage() {
           </Link>
         </SectionHeader>
 
-        {isMonthLoading ? <StateText text="이달의 제철 생선을 불러오는 중입니다." /> : null}
-        {isMonthError ? <StateText text="이달의 제철 생선을 불러오지 못했습니다." /> : null}
-        {!isMonthLoading && !isMonthError && monthFishes.length === 0 ? <StateText text="이달 제철 생선이 아직 없습니다." /> : null}
+        {isMonthLoading ? <SkeletonCards count={4} /> : null}
+        {isMonthError ? <ErrorState onRetry={() => refetchMonth()} /> : null}
+        {!isMonthLoading && !isMonthError && monthFishes.length === 0 ? (
+          <ErrorState message="이달 제철 생선이 아직 없어요" />
+        ) : null}
         {!isMonthLoading && !isMonthError && monthFishes.length > 0 ? (
           <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
             <div className="grid auto-cols-[220px] grid-flow-col gap-[14px] sm:auto-cols-fr sm:grid-flow-row sm:grid-cols-2 lg:grid-cols-4">
@@ -85,9 +89,11 @@ export default function HomePage() {
       <section className="mx-auto max-w-[980px] px-4 pt-9 sm:px-7">
         <SectionHeader title="에디터 추천" />
 
-        {isFeaturedLoading ? <StateText text="에디터 추천을 불러오는 중입니다." /> : null}
-        {isFeaturedError ? <StateText text="에디터 추천을 불러오지 못했습니다." /> : null}
-        {!isFeaturedLoading && !isFeaturedError && featuredFishes.length === 0 ? <StateText text="추천 생선이 아직 없습니다." /> : null}
+        {isFeaturedLoading ? <SkeletonCards count={2} className="grid gap-[14px] md:grid-cols-2" /> : null}
+        {isFeaturedError ? <ErrorState onRetry={() => refetchFeatured()} /> : null}
+        {!isFeaturedLoading && !isFeaturedError && featuredFishes.length === 0 ? (
+          <ErrorState message="추천 생선이 아직 없어요" />
+        ) : null}
         {!isFeaturedLoading && !isFeaturedError && featuredFishes.length > 0 ? (
           <div className="grid gap-[14px] md:grid-cols-2">
             {featuredFishes.slice(0, 2).map((fish) => (
@@ -112,8 +118,8 @@ export default function HomePage() {
           <SortSegment value={sort} onChange={setSort} />
         </div>
 
-        {isLoading ? <StateText text="도감을 불러오는 중입니다." /> : null}
-        {isError ? <StateText text="도감을 불러오지 못했습니다." /> : null}
+        {isLoading ? <SkeletonCards count={8} /> : null}
+        {isError ? <ErrorState onRetry={() => refetch()} /> : null}
         {!isLoading && !isError && fishes.length === 0 ? <EmptyFilterState onReset={resetFilters} /> : null}
         {!isLoading && !isError && fishes.length > 0 ? (
           <div className="grid grid-cols-1 gap-[14px] md:grid-cols-2 lg:grid-cols-4">

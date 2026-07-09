@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import FishCard from '../components/FishCard';
-import StateText from '../components/StateText';
+import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useFishList } from '../hooks/useFish';
 
@@ -36,11 +36,13 @@ export default function SavedPage() {
         </Link>
       </div>
 
-      {isLoading ? <StateText text="저장한 도감을 불러오는 중입니다." /> : null}
-      {isError ? <StateText text="저장한 도감을 불러오지 못했습니다." /> : null}
+      {isLoading ? (
+        <SkeletonCards count={4} className="grid gap-[22px] [grid-template-columns:repeat(auto-fill,minmax(256px,1fr))]" />
+      ) : null}
+      {isError ? <ErrorState /> : null}
       {!isLoading && !isError && bookmarkCount === 0 ? <EmptyState /> : null}
       {!isLoading && !isError && bookmarkCount > 0 && savedFishes.length === 0 ? (
-        <StateText text="저장한 생선을 현재 도감에서 찾을 수 없습니다." />
+        <ErrorState message="저장한 생선을 지금 도감에서 찾을 수 없어요" />
       ) : null}
       {!isLoading && !isError && savedFishes.length > 0 ? (
         <div className="grid gap-[22px] [grid-template-columns:repeat(auto-fill,minmax(256px,1fr))]">

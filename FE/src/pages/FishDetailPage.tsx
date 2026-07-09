@@ -7,6 +7,7 @@ import ReviewForm from '../components/ReviewForm';
 import ReviewList from '../components/ReviewList';
 import SeasonBar from '../components/SeasonBar';
 import { SeasonBadgeNow } from '../components/SeasonBadge';
+import { DetailSkeleton } from '../components/Skeletons';
 import { formatMonths, formatPriceLabel, formatPriceLevel, isInSeasonNow } from '../lib/format';
 import { getErrorMessage } from '../lib/errors';
 import { useFishDetail } from '../hooks/useFish';
@@ -81,11 +82,11 @@ export default function FishDetailPage() {
   }
 
   if (isLoading) {
-    return <StateText text="상세 정보를 불러오는 중입니다." />;
+    return <DetailSkeleton />;
   }
 
   if (isError || !fish) {
-    return <StateText text="생선을 찾을 수 없습니다." />;
+    return <StateText text="이 생선을 아직 도감에서 찾을 수 없어요" />;
   }
 
   const selectedImage = galleryImages[selectedImageIndex] ?? galleryImages[0] ?? null;
@@ -197,7 +198,7 @@ export default function FishDetailPage() {
         {tasteDescription ? (
           <p className="m-0 max-w-[640px] text-[15px] leading-[1.8] text-ink">{tasteDescription}</p>
         ) : (
-          <p className="m-0 text-sm text-ink-mute">맛 설명을 준비 중입니다.</p>
+          <p className="m-0 text-sm text-ink-mute">맛 설명을 준비 중이에요</p>
         )}
       </section>
 
@@ -215,7 +216,7 @@ export default function FishDetailPage() {
             ))}
           </ul>
         ) : (
-          <p className="m-0 text-sm text-ink-mute">준비된 팁이 없습니다.</p>
+          <p className="m-0 text-sm text-ink-mute">준비된 팁이 아직 없어요</p>
         )}
       </section>
 

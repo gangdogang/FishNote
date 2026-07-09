@@ -25,7 +25,7 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
 
   async function handleHelpful(reviewId: number) {
     if (isHelpful(reviewId)) {
-      setMessage('이미 도움돼요를 누른 후기입니다.');
+      setMessage('이미 도움돼요를 누른 후기예요');
       return;
     }
 

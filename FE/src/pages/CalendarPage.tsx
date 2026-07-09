@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import FishCard from '../components/FishCard';
-import StateText from '../components/StateText';
+import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import { useFishList } from '../hooks/useFish';
 
 const months = Array.from({ length: 12 }, (_, index) => index + 1);
@@ -66,8 +66,10 @@ export default function CalendarPage() {
         {selectedMonth}월 제철 <span className="text-[17px] font-medium text-ink-mute/70">· {isMonthLoading || isMonthError ? '-' : monthFishes.length}종</span>
       </h2>
 
-      {isMonthLoading ? <StateText text="제철 생선을 불러오는 중입니다." /> : null}
-      {isMonthError ? <StateText text="제철 생선을 불러오지 못했습니다." /> : null}
+      {isMonthLoading ? (
+        <SkeletonCards count={4} className="grid gap-[22px] [grid-template-columns:repeat(auto-fill,minmax(256px,1fr))]" />
+      ) : null}
+      {isMonthError ? <ErrorState /> : null}
       {!isMonthLoading && !isMonthError && monthFishes.length === 0 ? <EmptyState /> : null}
       {!isMonthLoading && !isMonthError && monthFishes.length > 0 ? (
         <div className="grid gap-[22px] [grid-template-columns:repeat(auto-fill,minmax(256px,1fr))]">

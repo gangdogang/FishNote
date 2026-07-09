@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { chipClass } from '../components/FilterChips';
 import FishCard from '../components/FishCard';
 import FishPlaceholder from '../components/FishPlaceholder';
-import StateText from '../components/StateText';
+import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import { useFishList } from '../hooks/useFish';
 import { SEASONS, TASTE_TAGS } from '../lib/filters';
 import { formatPriceLevel } from '../lib/format';
@@ -149,8 +149,10 @@ export default function SearchPage() {
             </div>
           ) : null}
 
-          {isLoading ? <StateText text="검색 중입니다." /> : null}
-          {isError ? <StateText text="검색 결과를 불러오지 못했습니다." /> : null}
+          {isLoading ? (
+            <SkeletonCards count={4} className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]" />
+          ) : null}
+          {isError ? <ErrorState /> : null}
           {!isLoading && !isError && fishes.length === 0 ? <EmptyState onReset={resetFilters} /> : null}
           {!isLoading && !isError && fishes.length > 0 ? (
             <div className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]">
