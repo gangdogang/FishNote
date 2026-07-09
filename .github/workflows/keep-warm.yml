@@ -13,4 +13,4 @@ jobs:
     steps:
       - name: Ping health endpoint
         run: |
-          curl -fsS --max-time 60 https://fishbook-api-sg.onrender.com/api/v1/health
+          curl -fsS --max-time 60 https://api.fishnote.kr/api/v1/health
