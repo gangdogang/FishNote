@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS fish (
 
 ALTER TABLE fish ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT false;
 
+-- 회원
+CREATE TABLE IF NOT EXISTS users (
+    id            BIGSERIAL PRIMARY KEY,
+    email         VARCHAR(255) NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    nickname      VARCHAR(30) NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- 제철 월
 CREATE TABLE IF NOT EXISTS fish_season_month (
     fish_id BIGINT NOT NULL REFERENCES fish(id) ON DELETE CASCADE,
