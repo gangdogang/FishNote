@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { FormEvent, useEffect, useRef, useState, type RefObject } from 'react';
 import { uploadImage } from '../api/image';
 import type { ReviewRequest } from '../types/review';
+import { Field, inputClass } from './FormField';
 
 type ReviewFormInputField = 'nickname' | 'rating' | 'content' | 'password';
 type ReviewFormField = ReviewFormInputField | 'image';
@@ -187,7 +188,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
 
       <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
         <div>
-          <Field label="비밀번호" error={fieldErrors.password}>
+          <Field label="비밀번호" error={fieldErrors.password} helper="후기를 지울 때만 써요 (4자 이상)">
             <input
               minLength={4}
               maxLength={20}
@@ -198,7 +199,6 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
               onChange={(event) => updateField('password', event.target.value)}
               className={inputClass(Boolean(fieldErrors.password))}
             />
-            <p className="m-0 mt-1 text-xs leading-snug text-ink-mute">후기를 지울 때만 써요 (4자 이상)</p>
           </Field>
 
           <div className="mt-2">
@@ -250,23 +250,6 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
       </div>
     </form>
   );
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
-  return (
-    <div className="block">
-      <span className="mb-[5px] block text-xs font-bold text-ink-mute">{label}</span>
-      {children}
-      {error ? <span className="mt-1 block text-[13px] font-medium leading-snug text-red-700">{error}</span> : null}
-    </div>
-  );
-}
-
-function inputClass(hasError: boolean) {
-  return [
-    'block w-full rounded-[10px] border bg-mist px-3 py-2.5 text-sm text-ink outline-none transition placeholder:text-ink-mute/70 focus:border-sea',
-    hasError ? 'border-red-300' : 'border-line',
-  ].join(' ');
 }
 
 function validateForm(form: ReviewFormState) {
