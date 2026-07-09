@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMe, login as loginRequest, signup as signupRequest } from '../api/auth';
 import type { AuthResponse, LoginRequest, SignupRequest } from '../api/auth';
+import { bookmarksMeQueryKey } from '../api/bookmarks';
 import {
   ACCESS_TOKEN_CHANGE_EVENT,
   ACCESS_TOKEN_STORAGE_KEY,
@@ -9,8 +10,15 @@ import {
   getStoredAccessToken,
   setStoredAccessToken,
 } from '../api/client';
+import { clearBookmarkMergeDismissed } from '../lib/bookmarkStorage';
 
 export const authMeQueryKey = ['auth', 'me'] as const;
+export const AUTH_SUCCESS_EVENT = 'fishnote:authSucceeded';
+
+function notifyAuthSucceeded() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_SUCCESS_EVENT));
+}
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -22,6 +30,8 @@ export function useAuth() {
       setAccessToken(nextAccessToken);
       if (!nextAccessToken) {
         queryClient.removeQueries({ queryKey: authMeQueryKey });
+        queryClient.removeQueries({ queryKey: bookmarksMeQueryKey });
+        clearBookmarkMergeDismissed();
       }
     }
 
@@ -48,10 +58,12 @@ export function useAuth() {
     async (response: AuthResponse) => {
       setStoredAccessToken(response.accessToken);
       setAccessToken(response.accessToken);
+      queryClient.removeQueries({ queryKey: bookmarksMeQueryKey });
       await queryClient.fetchQuery({
         queryKey: authMeQueryKey,
         queryFn: getMe,
       });
+      notifyAuthSucceeded();
     },
     [queryClient],
   );
@@ -68,6 +80,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     clearStoredAccessToken();
+    clearBookmarkMergeDismissed();
     setAccessToken(null);
     queryClient.clear();
   }, [queryClient]);

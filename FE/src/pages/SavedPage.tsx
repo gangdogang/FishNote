@@ -6,9 +6,22 @@ import { useBookmarks } from '../hooks/useBookmarks';
 import { useFishList } from '../hooks/useFish';
 
 export default function SavedPage() {
-  const { bookmarkedIdSet, bookmarkCount } = useBookmarks();
-  const { data: fishes = [], isLoading, isError } = useFishList({ sort: 'popular' });
-  const savedFishes = fishes.filter((fish) => bookmarkedIdSet.has(fish.id));
+  const {
+    bookmarkedIdSet,
+    bookmarkedFishes,
+    bookmarkCount,
+    isServerMode,
+    isLoading: isBookmarksLoading,
+    isError: isBookmarksError,
+  } = useBookmarks();
+  const {
+    data: fishes = [],
+    isLoading: isFishListLoading,
+    isError: isFishListError,
+  } = useFishList({ sort: 'popular' }, { enabled: !isServerMode });
+  const savedFishes = isServerMode ? bookmarkedFishes : fishes.filter((fish) => bookmarkedIdSet.has(fish.id));
+  const isLoading = isServerMode ? isBookmarksLoading : isFishListLoading;
+  const isError = isServerMode ? isBookmarksError : isFishListError;
 
   return (
     <main className="mx-auto max-w-[980px] px-4 pb-20 pt-8 sm:px-7">

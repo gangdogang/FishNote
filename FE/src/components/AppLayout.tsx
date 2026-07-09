@@ -3,6 +3,7 @@ import { Fish } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useAuth } from '../hooks/useAuth';
+import BookmarkMergeDialog from './BookmarkMergeDialog';
 import SearchBar from './SearchBar';
 
 interface AppLayoutProps {
@@ -172,6 +173,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </header>
 
       {children}
+      <BookmarkMergeDialog />
     </div>
   );
 }

@@ -2,10 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { getFishDetail, getFishList } from '../api/fish';
 import type { FishListParams } from '../types/fish';
 
-export function useFishList(params: FishListParams = {}) {
+interface FishListQueryOptions {
+  enabled?: boolean;
+}
+
+export function useFishList(params: FishListParams = {}, options: FishListQueryOptions = {}) {
   return useQuery({
     queryKey: ['fish', params],
     queryFn: () => getFishList(params),
+    enabled: options.enabled ?? true,
   });
 }
 
