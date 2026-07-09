@@ -94,11 +94,9 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
             <p className="m-0 mb-3 whitespace-pre-line break-words text-sm leading-[1.7] text-ink">{review.content}</p>
 
             {review.imageUrl ? (
-              <img
-                src={review.imageUrl}
-                alt=""
-                className="mb-3 max-h-40 w-full max-w-[420px] rounded-[10px] border border-line object-cover"
-              />
+              <a href={review.imageUrl} target="_blank" rel="noreferrer" className="mb-3 block max-w-[420px]">
+                <img src={review.imageUrl} alt="후기 사진" className="max-h-40 w-full rounded-[10px] border border-line object-cover" />
+              </a>
             ) : null}
 
             <button

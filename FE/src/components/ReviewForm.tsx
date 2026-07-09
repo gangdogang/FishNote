@@ -1,7 +1,9 @@
-import { FormEvent, useEffect, useState, type ReactNode, type RefObject } from 'react';
+import { FormEvent, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { uploadImage } from '../api/image';
 import type { ReviewRequest } from '../types/review';
 
-type ReviewFormField = 'nickname' | 'rating' | 'content' | 'password';
+type ReviewFormInputField = 'nickname' | 'rating' | 'content' | 'password';
+type ReviewFormField = ReviewFormInputField | 'image';
 
 interface ReviewFormState {
   nickname: string;
@@ -11,6 +13,11 @@ interface ReviewFormState {
 }
 
 type FieldErrors = Partial<Record<ReviewFormField, string>>;
+
+interface SelectedImage {
+  file: File;
+  previewUrl: string;
+}
 
 interface ReviewFormProps {
   submitting: boolean;
@@ -27,22 +34,64 @@ const emptyForm: ReviewFormState = {
   password: '',
 };
 
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const UPLOAD_ERROR_MESSAGE = '사진 업로드에 실패했어요. 사진 없이 등록하거나 다시 시도해 주세요';
+
 export default function ReviewForm({ submitting, error, resetKey, formRef, onSubmit }: ReviewFormProps) {
   const [form, setForm] = useState<ReviewFormState>(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const isBusy = submitting || uploading;
 
   useEffect(() => {
     setForm(emptyForm);
     setFieldErrors({});
+    setSelectedImage(null);
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, [resetKey]);
 
-  function updateField<Field extends ReviewFormField>(field: Field, value: ReviewFormState[Field]) {
+  useEffect(() => {
+    return () => {
+      if (selectedImage) URL.revokeObjectURL(selectedImage.previewUrl);
+    };
+  }, [selectedImage]);
+
+  function updateField<Field extends ReviewFormInputField>(field: Field, value: ReviewFormState[Field]) {
     setForm((prev) => ({ ...prev, [field]: value }));
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleImageSelect(file: File | undefined) {
+    setFieldErrors((prev) => ({ ...prev, image: undefined }));
+    if (!file) return;
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setSelectedImage(null);
+      setFieldErrors((prev) => ({ ...prev, image: '5MB 이하 사진만 올릴 수 있어요' }));
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedImage({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function removeImage() {
+    setSelectedImage(null);
+    setFieldErrors((prev) => ({ ...prev, image: undefined }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isBusy) return;
+
     const nextErrors = validateForm(form);
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
@@ -50,11 +99,26 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
     }
 
     setFieldErrors({});
+
+    let imageUrl: string | null = null;
+    if (selectedImage) {
+      setUploading(true);
+      try {
+        const response = await uploadImage(selectedImage.file);
+        imageUrl = response.url;
+      } catch {
+        setFieldErrors((prev) => ({ ...prev, image: UPLOAD_ERROR_MESSAGE }));
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     onSubmit({
       nickname: form.nickname.trim(),
       rating: form.rating,
       content: form.content.trim(),
-      imageUrl: null,
+      imageUrl,
       password: form.password,
     });
   }
@@ -122,28 +186,65 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
-        <Field label="비밀번호" error={fieldErrors.password}>
-          <input
-            minLength={4}
-            maxLength={20}
-            type="password"
-            value={form.password}
-            placeholder="4자 이상"
-            aria-invalid={Boolean(fieldErrors.password)}
-            onChange={(event) => updateField('password', event.target.value)}
-            className={inputClass(Boolean(fieldErrors.password))}
-          />
-          <p className="m-0 mt-1 text-xs leading-snug text-ink-mute">후기를 지울 때만 써요 (4자 이상)</p>
-        </Field>
+        <div>
+          <Field label="비밀번호" error={fieldErrors.password}>
+            <input
+              minLength={4}
+              maxLength={20}
+              type="password"
+              value={form.password}
+              placeholder="4자 이상"
+              aria-invalid={Boolean(fieldErrors.password)}
+              onChange={(event) => updateField('password', event.target.value)}
+              className={inputClass(Boolean(fieldErrors.password))}
+            />
+            <p className="m-0 mt-1 text-xs leading-snug text-ink-mute">후기를 지울 때만 써요 (4자 이상)</p>
+          </Field>
+
+          <div className="mt-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => handleImageSelect(event.target.files?.[0])}
+            />
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-line bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:border-sea hover:text-sea disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-ink-mute"
+            >
+              📷 사진 추가
+            </button>
+
+            {selectedImage ? (
+              <div className="relative mt-2 h-24 w-24 overflow-hidden rounded-[10px] border border-line bg-chipbg">
+                <img src={selectedImage.previewUrl} alt="선택한 후기 사진 미리보기" className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  disabled={isBusy}
+                  aria-label="사진 제거"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/80 bg-black/60 text-xs font-bold leading-none text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : null}
+
+            {fieldErrors.image ? <span className="mt-1 block text-[13px] font-medium leading-snug text-red-700">{fieldErrors.image}</span> : null}
+          </div>
+        </div>
 
         <div className="flex flex-col items-stretch gap-2 sm:items-end">
           {error ? <p className="m-0 text-[13px] font-medium leading-snug text-red-700">{error}</p> : null}
           <button
-            disabled={submitting}
+            disabled={isBusy}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-[10px] border-0 bg-sea px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sea disabled:cursor-not-allowed disabled:bg-slate-300 sm:w-auto"
             type="submit"
           >
-            {submitting ? '등록 중...' : '등록하기'}
+            {uploading ? '사진 올리는 중...' : submitting ? '등록 중...' : '등록하기'}
           </button>
         </div>
       </div>
