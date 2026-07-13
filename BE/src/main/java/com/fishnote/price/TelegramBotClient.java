@@ -21,17 +21,15 @@ public class TelegramBotClient {
         this.botToken = botToken;
     }
 
-    public void sendMessage(String chatId, String text, Integer replyToMessageId) {
+    public void sendMessage(String chatId, String text) {
         if (botToken == null || botToken.isBlank() || chatId == null || chatId.isBlank()) {
+            log.warn("Telegram bot token or chat id is missing; import reply was skipped.");
             return;
         }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("chat_id", chatId);
         body.put("text", text);
-        if (replyToMessageId != null) {
-            body.put("reply_to_message_id", replyToMessageId);
-        }
 
         try {
             restTemplate.postForEntity("https://api.telegram.org/bot" + botToken + "/sendMessage", body, String.class);

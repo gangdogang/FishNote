@@ -94,10 +94,7 @@ public class TelegramPriceWebhookController {
         if (!chatId.canConvertToLong()) {
             return;
         }
-        Integer replyToMessageId = message.path("message_id").canConvertToInt()
-                ? message.path("message_id").asInt()
-                : null;
-        telegramBotClient.sendMessage(String.valueOf(chatId.asLong()), text, replyToMessageId);
+        telegramBotClient.sendMessage(String.valueOf(chatId.asLong()), text);
     }
 
     private String replyText(TelegramPriceImportResponse response) {
