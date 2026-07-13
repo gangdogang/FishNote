@@ -9,4 +9,5 @@ public record FishPriceObservationResponse(
         String unit,
         String origin,
         String sizeGrade,
-        String sourceLabel) {}
+        String sourceLabel,
+        String shopName) {}

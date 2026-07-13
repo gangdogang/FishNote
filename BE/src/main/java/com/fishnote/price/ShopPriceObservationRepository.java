@@ -12,6 +12,9 @@ public interface ShopPriceObservationRepository extends JpaRepository<ShopPriceO
     List<ShopPriceObservation> findByFish_IdAndObservedAtGreaterThanEqualOrderByObservedAtDesc(
             Long fishId, OffsetDateTime observedAfter, Pageable pageable);
 
+    List<ShopPriceObservation> findByFish_IdAndObservedAtGreaterThanEqualOrderByObservedAtAsc(
+            Long fishId, OffsetDateTime observedAfter);
+
     long countByFish_IdAndObservedAtGreaterThanEqual(Long fishId, OffsetDateTime observedAfter);
 
     @Query(

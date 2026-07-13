@@ -58,6 +58,14 @@ public class ShopPriceParser {
             return List.of();
         }
 
+        return splitByShop(text, fallbackSourceName).stream()
+                .flatMap(segment -> parseSegment(segment.text(), fallbackObservedAt, sourceType, segment.sourceName()).stream())
+                .distinct()
+                .toList();
+    }
+
+    private List<ParsedShopPrice> parseSegment(
+            String text, OffsetDateTime fallbackObservedAt, String sourceType, String fallbackSourceName) {
         OffsetDateTime observedAt = inferObservedAt(text, fallbackObservedAt);
         String sourceName = firstNonBlank(inferShopFromText(text), fallbackSourceName);
         String speaker = firstNonBlank(sourceName, "텔레그램");
@@ -101,7 +109,30 @@ public class ShopPriceParser {
                     line));
         }
 
-        return rows.stream().distinct().toList();
+        return rows;
+    }
+
+    private List<ShopSegment> splitByShop(String text, String fallbackSourceName) {
+        List<ShopSegment> segments = new ArrayList<>();
+        List<String> currentLines = new ArrayList<>();
+        String currentShop = firstNonBlank(inferShopFromText(text), fallbackSourceName);
+
+        for (String rawLine : text.split("\\R")) {
+            String lineShop = inferShopFromText(rawLine);
+            if (!lineShop.isBlank() && !currentLines.isEmpty() && !lineShop.equals(currentShop)) {
+                segments.add(new ShopSegment(firstNonBlank(currentShop, fallbackSourceName), String.join("\n", currentLines)));
+                currentLines = new ArrayList<>();
+            }
+            if (!lineShop.isBlank()) {
+                currentShop = lineShop;
+            }
+            currentLines.add(rawLine);
+        }
+
+        if (!currentLines.isEmpty()) {
+            segments.add(new ShopSegment(firstNonBlank(currentShop, fallbackSourceName), String.join("\n", currentLines)));
+        }
+        return segments;
     }
 
     private OffsetDateTime inferObservedAt(String text, OffsetDateTime fallbackObservedAt) {
@@ -329,4 +360,6 @@ public class ShopPriceParser {
     private record AliasMatch(String canonicalFishName, String reportedName) {}
 
     private record PriceMatch(int minKrw, int maxKrw, BigDecimal confidence) {}
+
+    private record ShopSegment(String sourceName, String text) {}
 }

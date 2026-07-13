@@ -1,6 +1,7 @@
 package com.fishnote.price;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,22 +51,32 @@ class FishPriceControllerTest {
     @Test
     void returnsRecentPricesWithoutInternalCollectionFields() throws Exception {
         observationRepository.save(observation(
-                OffsetDateTime.now(ShopPriceParser.KST).minusHours(2), 31000, 33000));
+                OffsetDateTime.now(ShopPriceParser.KST).minusHours(2), "윤호수산", 31000, 33000));
         observationRepository.save(observation(
-                OffsetDateTime.now(ShopPriceParser.KST).minusDays(20), 25000, 25000));
+                OffsetDateTime.now(ShopPriceParser.KST).minusHours(1), "성전물산", 32000, 34000));
+        observationRepository.save(observation(
+                OffsetDateTime.now(ShopPriceParser.KST).minusDays(20), "윤호수산", 25000, 25000));
 
         String response = mockMvc.perform(get("/api/v1/fish/{fishId}/prices", fish.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fishId", is(fish.getId().intValue())))
                 .andExpect(jsonPath("$.days", is(14)))
-                .andExpect(jsonPath("$.observationCount", is(1)))
-                .andExpect(jsonPath("$.latest.priceMinKrw", is(31000)))
-                .andExpect(jsonPath("$.latest.priceMaxKrw", is(33000)))
+                .andExpect(jsonPath("$.observationCount", is(2)))
+                .andExpect(jsonPath("$.latest.priceMinKrw", is(32000)))
+                .andExpect(jsonPath("$.latest.priceMaxKrw", is(34000)))
                 .andExpect(jsonPath("$.latest.origin", is("제주")))
                 .andExpect(jsonPath("$.latest.sizeGrade", is("2.4~2.5kg")))
                 .andExpect(jsonPath("$.latest.unit", is("kg")))
                 .andExpect(jsonPath("$.latest.sourceLabel", is("상회 시세")))
-                .andExpect(jsonPath("$.recent.length()", is(1)))
+                .andExpect(jsonPath("$.latest.shopName", is("성전물산")))
+                .andExpect(jsonPath("$.recent.length()", is(2)))
+                .andExpect(jsonPath("$.dailyAverage.length()", is(1)))
+                .andExpect(jsonPath("$.dailyAverage[0].priceMinKrw", is(31000)))
+                .andExpect(jsonPath("$.dailyAverage[0].priceMaxKrw", is(34000)))
+                .andExpect(jsonPath("$.dailyAverage[0].avgPriceKrw", is(32500)))
+                .andExpect(jsonPath("$.dailyAverage[0].observationCount", is(2)))
+                .andExpect(jsonPath("$.byShop[*].shopName", containsInAnyOrder("윤호수산", "성전물산")))
+                .andExpect(jsonPath("$.byShop.length()", is(2)))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -91,12 +102,12 @@ class FishPriceControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    private ShopPriceObservation observation(OffsetDateTime observedAt, int minPrice, int maxPrice) {
+    private ShopPriceObservation observation(OffsetDateTime observedAt, String shopName, int minPrice, int maxPrice) {
         ShopPriceObservation observation = new ShopPriceObservation();
         observation.setFish(fish);
         observation.setObservedAt(observedAt);
         observation.setSourceType("telegram_bot");
-        observation.setSourceName("내부업체명");
+        observation.setSourceName(shopName);
         observation.setSpeaker("내부발화자");
         observation.setCanonicalFishName("광어");
         observation.setReportedName("제주광어");

@@ -49,6 +49,8 @@ class TelegramPriceWebhookControllerTest {
                 {
                   "update_id": 1,
                   "message": {
+                    "message_id": 10,
+                    "chat": {"id": 1234},
                     "date": 1783900800,
                     "text": "2026년07월13일 윤호수산 시세단가\\n제주광어2.4~2.5kㅡ32000\\n###노르웨이###\\n연어1k20000(6~7k사이)10시전에주문주세요\\n연어손질비용kg당2000"
                   }

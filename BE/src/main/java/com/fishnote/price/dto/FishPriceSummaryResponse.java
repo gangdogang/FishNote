@@ -7,4 +7,6 @@ public record FishPriceSummaryResponse(
         int days,
         long observationCount,
         FishPriceObservationResponse latest,
-        List<FishPriceObservationResponse> recent) {}
+        List<FishPriceObservationResponse> recent,
+        List<FishPriceGraphPointResponse> dailyAverage,
+        List<FishShopPriceSeriesResponse> byShop) {}

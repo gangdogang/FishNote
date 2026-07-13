@@ -22,12 +22,15 @@ public class TelegramPriceWebhookController {
     private static final String TELEGRAM_SECRET_HEADER = "X-Telegram-Bot-Api-Secret-Token";
 
     private final TelegramPriceImportService telegramPriceImportService;
+    private final TelegramBotClient telegramBotClient;
     private final String webhookSecret;
 
     public TelegramPriceWebhookController(
             TelegramPriceImportService telegramPriceImportService,
+            TelegramBotClient telegramBotClient,
             @Value("${app.telegram.webhook-secret:}") String webhookSecret) {
         this.telegramPriceImportService = telegramPriceImportService;
+        this.telegramBotClient = telegramBotClient;
         this.webhookSecret = webhookSecret;
     }
 
@@ -39,11 +42,14 @@ public class TelegramPriceWebhookController {
         JsonNode message = extractMessage(update);
         String text = extractText(message);
         if (text.isBlank()) {
-            return ResponseEntity.ok(new TelegramPriceImportResponse(0, 0, List.of()));
+            TelegramPriceImportResponse response = new TelegramPriceImportResponse(0, 0, List.of());
+            sendReply(message, "텍스트 시세표를 찾지 못했습니다. 카톡 시세표 전체 텍스트를 그대로 보내주세요.");
+            return ResponseEntity.ok(response);
         }
 
         TelegramPriceImportResponse response =
                 telegramPriceImportService.importText(text, extractObservedAt(message));
+        sendReply(message, replyText(response));
         return ResponseEntity.ok(response);
     }
 
@@ -81,5 +87,28 @@ public class TelegramPriceWebhookController {
             return Instant.ofEpochSecond(message.path("date").asLong()).atOffset(ShopPriceParser.KST);
         }
         return OffsetDateTime.now(ShopPriceParser.KST);
+    }
+
+    private void sendReply(JsonNode message, String text) {
+        JsonNode chatId = message.path("chat").path("id");
+        if (!chatId.canConvertToLong()) {
+            return;
+        }
+        Integer replyToMessageId = message.path("message_id").canConvertToInt()
+                ? message.path("message_id").asInt()
+                : null;
+        telegramBotClient.sendMessage(String.valueOf(chatId.asLong()), text, replyToMessageId);
+    }
+
+    private String replyText(TelegramPriceImportResponse response) {
+        String sourceNames = response.sourceNames().isEmpty() ? "미확인" : String.join(", ", response.sourceNames());
+        if (response.parsedCount() == 0) {
+            return "파싱된 시세가 없습니다.\n가게명과 가격 라인이 포함된 시세표 전체 텍스트를 보내주세요.";
+        }
+        return "시세 저장 완료\n"
+                + "- 파싱: " + response.parsedCount() + "건\n"
+                + "- 신규 저장: " + response.savedCount() + "건\n"
+                + "- 가게: " + sourceNames + "\n"
+                + "가게별로 저장했고, 조회 API에서는 전체 합산 그래프 데이터도 제공합니다.";
     }
 }
