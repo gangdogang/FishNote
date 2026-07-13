@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS fish_taste_tag (
 -- 추가 이미지(갤러리)
 CREATE TABLE IF NOT EXISTS fish_image (
     fish_id     BIGINT NOT NULL REFERENCES fish(id) ON DELETE CASCADE,
-    image_order SMALLINT NOT NULL,
+    image_order INTEGER NOT NULL,
     url         TEXT NOT NULL,
     PRIMARY KEY (fish_id, image_order)
 );
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS fish_similar (
 -- 이렇게 즐겨요 팁
 CREATE TABLE IF NOT EXISTS fish_tip (
     fish_id   BIGINT NOT NULL REFERENCES fish(id) ON DELETE CASCADE,
-    tip_order SMALLINT NOT NULL,
+    tip_order INTEGER NOT NULL,
     content   TEXT NOT NULL,
     PRIMARY KEY (fish_id, tip_order)
 );

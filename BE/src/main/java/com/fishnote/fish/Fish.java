@@ -60,7 +60,7 @@ public class Fish {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "fish_image", joinColumns = @JoinColumn(name = "fish_id"))
-    @OrderColumn(name = "image_order", nullable = false, columnDefinition = "smallint")
+    @OrderColumn(name = "image_order", nullable = false, columnDefinition = "integer")
     @Column(name = "url", nullable = false, columnDefinition = "text")
     private List<String> images = new ArrayList<>();
 
@@ -88,7 +88,7 @@ public class Fish {
 
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "fish_tip", joinColumns = @JoinColumn(name = "fish_id"))
-    @OrderColumn(name = "tip_order", nullable = false, columnDefinition = "smallint")
+    @OrderColumn(name = "tip_order", nullable = false, columnDefinition = "integer")
     @Column(name = "content", nullable = false, columnDefinition = "text")
     private List<String> tips = new ArrayList<>();
 
