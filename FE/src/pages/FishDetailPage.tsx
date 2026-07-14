@@ -1,6 +1,6 @@
-import { Heart } from 'lucide-react';
+import { Heart, Share2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import FishCard from '../components/FishCard';
 import FishPlaceholder from '../components/FishPlaceholder';
 import ReviewForm from '../components/ReviewForm';
@@ -8,6 +8,7 @@ import ReviewList from '../components/ReviewList';
 import SeasonBar from '../components/SeasonBar';
 import { SeasonBadgeNow } from '../components/SeasonBadge';
 import { DetailSkeleton } from '../components/Skeletons';
+import { useToast } from '../components/Toast';
 import { formatMonths, formatPriceLabel, formatPriceLevel, isInSeasonNow } from '../lib/format';
 import { getErrorMessage } from '../lib/errors';
 import { useFishDetail, useFishPrices } from '../hooks/useFish';
@@ -19,7 +20,12 @@ import type { ReviewRequest, ReviewSort } from '../types/review';
 
 export default function FishDetailPage() {
   const params = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { showToast } = useToast();
   const fishId = Number(params.id);
+  // 앱 안에서 이동해 온 경우에만 브라우저 히스토리로 복귀 (검색 결과·필터 유지)
+  const canGoBack = location.key !== 'default';
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [reviewFormResetKey, setReviewFormResetKey] = useState(0);
   const [formError, setFormError] = useState<string | undefined>();
@@ -57,9 +63,36 @@ export default function FishDetailPage() {
   function handleCreate(request: ReviewRequest) {
     setFormError(undefined);
     createMutation.mutate(request, {
-      onSuccess: () => setReviewFormResetKey((key) => key + 1),
+      onSuccess: () => {
+        setReviewFormResetKey((key) => key + 1);
+        // 최신순으로 바꿔 방금 쓴 후기가 목록 맨 위에 보이게 한 뒤 그 위치로 이동
+        setReviewSort('latest');
+        showToast('후기가 등록됐어요');
+        window.requestAnimationFrame(() => {
+          document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      },
       onError: (error) => setFormError(getErrorMessage(error)),
     });
+  }
+
+  async function handleShare() {
+    if (!fish) return;
+    const url = window.location.href;
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({
+          title: `${fish.name} | FishNote`,
+          text: `${fish.name} 회의 제철·맛·가격, FishNote에서 확인해보세요.`,
+          url,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      showToast('링크를 복사했어요');
+    } catch {
+      // 사용자가 공유 시트를 닫은 경우 등은 조용히 무시
+    }
   }
 
   function openReviewForm() {
@@ -115,7 +148,7 @@ export default function FishDetailPage() {
     <main className="mx-auto max-w-content px-4 pb-20 pt-7 sm:px-7">
       <section className="grid items-start gap-7 lg:grid-cols-[1.05fr_1fr]">
         <div>
-          <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl bg-chipbg">
+          <div className="flex aspect-[4/3] max-h-[420px] w-full items-center justify-center overflow-hidden rounded-2xl bg-chipbg">
             {selectedImage ? (
               <img src={selectedImage} alt={`${fish.name} 회 사진`} className="h-full w-full object-cover" />
             ) : (
@@ -143,9 +176,13 @@ export default function FishDetailPage() {
         </div>
 
         <div className="min-w-0">
-          <Link to="/" className="mb-3 inline-flex text-13 font-medium text-ink-mute transition hover:text-sea">
-            ← 도감으로
-          </Link>
+          <button
+            type="button"
+            onClick={() => (canGoBack ? navigate(-1) : navigate('/'))}
+            className="mb-3 inline-flex bg-transparent p-0 text-13 font-medium text-ink-mute transition hover:text-sea"
+          >
+            ← {canGoBack ? '이전으로' : '도감으로'}
+          </button>
 
           <div className="mb-2 min-h-[26px]">{inSeasonNow ? <SeasonBadgeNow /> : null}</div>
 
@@ -176,8 +213,24 @@ export default function FishDetailPage() {
           <div className="mb-5 grid grid-cols-3 overflow-hidden rounded-card border border-line bg-surface">
             <SpecCell label="제철" value={formatMonths(fish.seasonMonths)} />
             <SpecCell label="맛" value={fish.tasteTags.length > 0 ? fish.tasteTags.join(' · ') : '정보 준비 중'} />
-            <SpecCell label="가격대" value={formatPriceLevel(fish.priceLevel)} subValue={formatPriceLabel(fish.priceLevel)} strongClassName="text-ink" />
+            <SpecCell
+              label="가격대"
+              value={fish.priceLevel ? formatPriceLevel(fish.priceLevel) : '정보 준비 중'}
+              subValue={formatPriceLabel(fish.priceLevel)}
+              strongClassName="text-ink"
+            />
           </div>
+
+          {priceSummary?.latest ? (
+            <button
+              type="button"
+              onClick={() => document.getElementById('price-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="-mt-2.5 mb-5 inline-flex min-h-11 items-center gap-1 bg-transparent p-0 text-13 font-semibold text-sea transition hover:text-sea-deep"
+            >
+              최근 시장가 {formatObservedPrice(priceSummary.latest)}
+              {priceSummary.latest.unit ? ` / ${priceSummary.latest.unit}` : ''} · 가격 현황 보기 ↓
+            </button>
+          ) : null}
 
           <div className="mb-5">
             <SeasonBar months={fish.seasonMonths} />
@@ -200,6 +253,15 @@ export default function FishDetailPage() {
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-btn border border-line bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-sea hover:text-sea"
             >
               후기 쓰기
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleShare()}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-btn border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-sea hover:text-sea"
+              aria-label={`${fish.name} 공유하기`}
+            >
+              <Share2 className="h-4 w-4" aria-hidden />
+              공유
             </button>
           </div>
         </div>
@@ -325,7 +387,7 @@ function RecentPriceSection({ fishName, summary }: { fishName: string; summary: 
   const recentFallback = summary.recent.slice(0, 3);
 
   return (
-    <section className="mt-11" aria-labelledby="recent-price-heading">
+    <section id="price-section" className="mt-11 scroll-mt-24" aria-labelledby="recent-price-heading">
       <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2">
         <h2 id="recent-price-heading" className="m-0 text-19 font-extrabold tracking-normal text-ink">
           가격 현황

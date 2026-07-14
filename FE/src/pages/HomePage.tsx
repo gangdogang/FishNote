@@ -6,6 +6,7 @@ import FishCard from '../components/FishCard';
 import HomeQuickNav from '../components/HomeQuickNav';
 import SearchBar from '../components/SearchBar';
 import { ErrorState, SkeletonCards } from '../components/Skeletons';
+import SortSegment from '../components/SortSegment';
 import { useFishList } from '../hooks/useFish';
 import type { FishSort, Season } from '../types/fish';
 
@@ -146,7 +147,7 @@ export default function HomePage() {
         {isError ? <ErrorState onRetry={() => refetch()} /> : null}
         {!isLoading && !isError && fishes.length === 0 ? <EmptyFilterState onReset={resetFilters} /> : null}
         {!isLoading && !isError && fishes.length > 0 ? (
-          <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             {fishes.map((fish) => (
               <FishCard key={fish.id} fish={fish} />
             ))}
@@ -165,36 +166,6 @@ function SectionHeader({ title, count, children }: { title: string; count?: stri
       {children ? <div className="ml-auto flex-none">{children}</div> : null}
     </div>
   );
-}
-
-function SortSegment({ value, onChange }: { value: FishSort; onChange: (value: FishSort) => void }) {
-  return (
-    <div className="inline-flex w-fit flex-none rounded-full border border-line bg-surface p-1" aria-label="정렬">
-      <button
-        type="button"
-        onClick={() => onChange('popular')}
-        aria-pressed={value === 'popular'}
-        className={segmentClass(value === 'popular')}
-      >
-        인기순
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange('name')}
-        aria-pressed={value === 'name'}
-        className={segmentClass(value === 'name')}
-      >
-        이름순
-      </button>
-    </div>
-  );
-}
-
-function segmentClass(active: boolean) {
-  return [
-    'min-h-11 rounded-full px-3.5 text-13 font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea focus-visible:ring-offset-2',
-    active ? 'bg-sea text-white' : 'text-ink-mute hover:text-sea',
-  ].join(' ');
 }
 
 function EmptyFilterState({ onReset }: { onReset: () => void }) {

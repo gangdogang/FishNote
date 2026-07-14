@@ -228,7 +228,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
               type="button"
               disabled={isBusy}
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex min-h-11 items-center justify-center rounded-btn border border-line bg-surface px-3 py-2 text-13 font-bold text-ink transition hover:border-sea hover:text-sea disabled:cursor-not-allowed disabled:bg-slate-100 dark:bg-slate-800 disabled:text-ink-mute"
+              className="inline-flex min-h-11 items-center justify-center rounded-btn border border-line bg-surface px-3 py-2 text-13 font-bold text-ink transition hover:border-sea hover:text-sea disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-ink-mute"
             >
               📷 사진 추가
             </button>
@@ -256,7 +256,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
           {error ? <p className="m-0 text-13 font-medium leading-snug text-red-700 dark:text-red-400">{error}</p> : null}
           <button
             disabled={isBusy}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-btn border-0 bg-sea px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-600 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-btn border-0 bg-sea px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600 sm:w-auto"
             type="submit"
           >
             {uploading ? '사진 올리는 중...' : submitting ? '등록 중...' : '등록하기'}

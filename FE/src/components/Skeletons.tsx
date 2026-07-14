@@ -20,7 +20,7 @@ interface SkeletonCardsProps {
 
 export function SkeletonCards({
   count = 4,
-  className = 'grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-4',
+  className = 'grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4',
 }: SkeletonCardsProps) {
   return (
     <div className={className} role="status" aria-label="불러오는 중">
@@ -35,7 +35,7 @@ export function DetailSkeleton() {
   return (
     <main className="mx-auto max-w-content px-4 pb-20 pt-7 sm:px-7" role="status" aria-label="불러오는 중">
       <div className="grid items-start gap-7 lg:grid-cols-[1.05fr_1fr]">
-        <div className={['aspect-[4/3] rounded-2xl', pulse].join(' ')} />
+        <div className={['aspect-[4/3] max-h-[420px] w-full rounded-2xl', pulse].join(' ')} />
         <div className="grid content-start gap-3">
           <div className={['h-4 w-24 rounded', pulse].join(' ')} />
           <div className={['h-8 w-40 rounded', pulse].join(' ')} />

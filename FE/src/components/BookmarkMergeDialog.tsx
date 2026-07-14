@@ -111,7 +111,7 @@ export default function BookmarkMergeDialog() {
             type="button"
             disabled={mergeMutation.isPending}
             onClick={() => mergeMutation.mutate(fishIds)}
-            className="inline-flex min-h-11 items-center justify-center rounded-btn border-0 bg-sea px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-600"
+            className="inline-flex min-h-11 items-center justify-center rounded-btn border-0 bg-sea px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
           >
             {mergeMutation.isPending ? '옮기는 중...' : '옮기기'}
           </button>

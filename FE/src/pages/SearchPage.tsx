@@ -4,6 +4,7 @@ import { chipClass } from '../lib/uiClasses';
 import FishCard from '../components/FishCard';
 import FishPlaceholder from '../components/FishPlaceholder';
 import { ErrorState, SkeletonCards } from '../components/Skeletons';
+import SortSegment from '../components/SortSegment';
 import { useFishList } from '../hooks/useFish';
 import { SEASONS, TASTE_TAGS } from '../lib/filters';
 import { formatPriceLevel } from '../lib/format';
@@ -19,7 +20,7 @@ const priceLevels = [
 ];
 
 export default function SearchPage() {
-  usePageMeta('탐색', '제철·맛·가격 필터로 원하는 회를 찾아보세요.');
+  usePageMeta('검색', '제철·맛·가격 필터로 원하는 회를 찾아보세요.');
   const [searchParams, setSearchParams] = useSearchParams();
   const params = useMemo(
     () => ({
@@ -122,14 +123,7 @@ export default function SearchPage() {
               {params.search ? ' ' : null}
               검색 결과 <b className="font-bold text-ink">{isLoading ? '-' : fishes.length}</b>건
             </span>
-            <select
-              value={params.sort}
-              onChange={(event) => update({ sort: event.target.value as FishSort })}
-              className="h-10 w-fit rounded-btn border border-line bg-surface px-3.25 text-sm text-ink outline-none transition hover:border-sea focus:border-sea"
-            >
-              <option value="popular">인기순</option>
-              <option value="name">이름순</option>
-            </select>
+            <SortSegment value={params.sort} onChange={(sort) => update({ sort })} />
           </div>
 
           {activeFilterPills.length > 0 ? (
@@ -155,7 +149,9 @@ export default function SearchPage() {
             <SkeletonCards count={4} className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]" />
           ) : null}
           {isError ? <ErrorState /> : null}
-          {!isLoading && !isError && fishes.length === 0 ? <EmptyState onReset={resetFilters} /> : null}
+          {!isLoading && !isError && fishes.length === 0 ? (
+            <EmptyState onReset={resetFilters} onExample={(name) => setSearchParams(new URLSearchParams({ search: name }))} />
+          ) : null}
           {!isLoading && !isError && fishes.length > 0 ? (
             <div className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]">
               {fishes.map((fish) => (
@@ -187,18 +183,23 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-function EmptyState({ onReset }: { onReset: () => void }) {
+const exampleSearches = ['광어', '방어', '연어', '참돔'];
+
+function EmptyState({ onReset, onExample }: { onReset: () => void; onExample: (name: string) => void }) {
   return (
     <div className="rounded-card border border-dashed border-line px-5 py-[72px] text-center">
       <div className="mx-auto mb-5 flex h-[84px] w-[84px] items-center justify-center rounded-full bg-chipbg">
         <FishPlaceholder className="h-[29px] w-[46px] stroke-ink-mute/40" />
       </div>
       <h3 className="mb-2 text-lg font-bold text-ink">검색 결과가 없어요</h3>
-      <p className="mb-5 text-14.5 leading-[1.5] text-ink-mute">
-        검색어나 필터를 바꿔보세요.
-        <br />
-        예: <b className="font-bold text-ink">광어, 방어, 연어</b>
-      </p>
+      <p className="mb-4 text-14.5 leading-[1.5] text-ink-mute">검색어나 필터를 바꿔보세요. 이런 생선은 어때요?</p>
+      <div className="mb-5 flex flex-wrap justify-center gap-2">
+        {exampleSearches.map((name) => (
+          <button key={name} type="button" onClick={() => onExample(name)} className={chipClass(false)}>
+            {name}
+          </button>
+        ))}
+      </div>
       <button
         type="button"
         onClick={onReset}

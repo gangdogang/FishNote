@@ -1,4 +1,4 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   deleteAccount as deleteAccountRequest,
@@ -101,22 +101,27 @@ function useAuthState() {
     onSuccess: logout,
   });
 
-  return {
-    user: meQuery.data ?? null,
-    accessToken,
-    isAuthenticated: Boolean(accessToken && meQuery.data),
-    isAuthLoading: meQuery.isLoading,
-    meQuery,
-    login: loginMutation.mutateAsync,
-    signup: signupMutation.mutateAsync,
-    loginWithKakao: kakaoLoginMutation.mutateAsync,
-    deleteAccount: deleteAccountMutation.mutateAsync,
-    logout,
-    loginMutation,
-    signupMutation,
-    kakaoLoginMutation,
-    deleteAccountMutation,
-  };
+  // Provider value로 내려가므로 참조 안정성 필수 — 매 렌더 새 객체면 모든 소비자가 리렌더됨.
+  // (React Query v5의 query/mutation 결과 객체는 상태가 바뀔 때만 새 참조가 됨)
+  return useMemo(
+    () => ({
+      user: meQuery.data ?? null,
+      accessToken,
+      isAuthenticated: Boolean(accessToken && meQuery.data),
+      isAuthLoading: meQuery.isLoading,
+      meQuery,
+      login: loginMutation.mutateAsync,
+      signup: signupMutation.mutateAsync,
+      loginWithKakao: kakaoLoginMutation.mutateAsync,
+      deleteAccount: deleteAccountMutation.mutateAsync,
+      logout,
+      loginMutation,
+      signupMutation,
+      kakaoLoginMutation,
+      deleteAccountMutation,
+    }),
+    [accessToken, meQuery, loginMutation, signupMutation, kakaoLoginMutation, deleteAccountMutation, logout],
+  );
 }
 
 type AuthContextValue = ReturnType<typeof useAuthState>;

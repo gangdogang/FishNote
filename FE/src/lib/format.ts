@@ -6,7 +6,8 @@ export const PRICE_LABELS: Record<number, string> = {
 
 export function formatPriceSymbols(level?: number | null) {
   if (!level || level < 1) {
-    return '시세';
+    // 가격대 미정일 때 "시세"라는 단어가 값처럼 보여 혼란을 줌 — 표시하지 않는다
+    return '';
   }
   return '₩'.repeat(Math.min(3, level));
 }
@@ -75,17 +76,3 @@ function buildMonthRanges(months: number[]) {
   return ranges;
 }
 
-export function seasonLabel(season?: string) {
-  switch (season) {
-    case 'spring':
-      return '봄';
-    case 'summer':
-      return '여름';
-    case 'fall':
-      return '가을';
-    case 'winter':
-      return '겨울';
-    default:
-      return '전체';
-  }
-}

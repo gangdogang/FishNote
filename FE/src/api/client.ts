@@ -77,7 +77,3 @@ apiClient.interceptors.response.use(
   },
 );
 
-export async function getHealth() {
-  const { data } = await apiClient.get<{ status: string }>('/health');
-  return data;
-}

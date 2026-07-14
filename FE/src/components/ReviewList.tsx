@@ -152,7 +152,7 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
                       type="button"
                       disabled={workingReviewId === review.id}
                       onClick={() => void handleDelete(review)}
-                      className="min-h-11 flex-1 rounded-btn border-0 bg-red-600 px-3 py-2 text-13 font-semibold text-white disabled:cursor-wait disabled:bg-slate-300 dark:bg-slate-600 sm:flex-none"
+                      className="min-h-11 flex-1 rounded-btn border-0 bg-red-600 px-3 py-2 text-13 font-semibold text-white disabled:cursor-wait disabled:bg-slate-300 dark:disabled:bg-slate-600 sm:flex-none"
                     >
                       삭제
                     </button>

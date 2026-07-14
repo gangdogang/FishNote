@@ -130,7 +130,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-1 inline-flex min-h-11 w-full items-center justify-center rounded-btn border-0 bg-sea px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-600"
+          className="mt-1 inline-flex min-h-11 w-full items-center justify-center rounded-btn border-0 bg-sea px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
         >
           {submitting ? '확인 중...' : '가입하기'}
         </button>

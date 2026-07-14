@@ -85,7 +85,7 @@ export default function AccountPage() {
           <button
             type="submit"
             disabled={(requiresPassword && !password) || confirmation !== '탈퇴합니다' || deleteAccountMutation.isPending}
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-btn bg-red-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:bg-slate-600 sm:w-fit"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-btn bg-red-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600 sm:w-fit"
           >
             {deleteAccountMutation.isPending ? '탈퇴 처리 중...' : '계정 삭제'}
           </button>

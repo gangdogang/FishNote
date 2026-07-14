@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
+import { ToastProvider } from './components/Toast';
 import { AuthProvider } from './hooks/useAuth';
 import { BookmarkProvider } from './hooks/useBookmarks';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
@@ -21,13 +22,15 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BookmarkProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </BookmarkProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <BookmarkProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </BookmarkProvider>
+        </AuthProvider>
+      </ToastProvider>
       <Analytics />
     </QueryClientProvider>
   </React.StrictMode>,

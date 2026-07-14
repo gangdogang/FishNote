@@ -7,6 +7,7 @@ import {
   writeLocalBookmarks,
 } from '../lib/bookmarkStorage';
 import type { FishSummary } from '../types/fish';
+import { useToast } from '../components/Toast';
 import { useAuth } from './useAuth';
 
 type BookmarkSnapshot = number[];
@@ -25,6 +26,7 @@ const emptyServerBookmarks: FishSummary[] = [];
 
 function useBookmarksState() {
   const queryClient = useQueryClient();
+  const { showToast } = useToast();
   const { accessToken } = useAuth();
   const isServerMode = Boolean(accessToken);
   const localBookmarkedIds = useSyncExternalStore(subscribeLocalBookmarks, readLocalBookmarks, () => emptySnapshot);
@@ -71,33 +73,50 @@ function useBookmarksState() {
     (fishId: number) => {
       if (!isServerMode) {
         const currentIds = readLocalBookmarks();
-        const nextIds = currentIds.includes(fishId)
-          ? currentIds.filter((id) => id !== fishId)
-          : [...currentIds, fishId];
+        const isAdding = !currentIds.includes(fishId);
+        const nextIds = isAdding ? [...currentIds, fishId] : currentIds.filter((id) => id !== fishId);
 
         writeLocalBookmarks(nextIds);
+        if (isAdding) {
+          // 익명 저장은 이 기기에만 남는다는 사실을 저장 시점에 알려 로그인 전환 기회를 만든다
+          showToast('저장했어요 · 로그인하면 다른 기기에서도 볼 수 있어요');
+        }
         return;
       }
 
-      toggleBookmarkMutation.mutate({
-        fishId,
-        shouldBookmark: !bookmarkedIdSet.has(fishId),
-      });
+      const shouldBookmark = !bookmarkedIdSet.has(fishId);
+      toggleBookmarkMutation.mutate({ fishId, shouldBookmark });
+      if (shouldBookmark) {
+        showToast('내 도감에 저장했어요');
+      }
     },
-    [bookmarkedIdSet, isServerMode, toggleBookmarkMutation],
+    [bookmarkedIdSet, isServerMode, showToast, toggleBookmarkMutation],
   );
 
-  return {
-    bookmarkedIds,
-    bookmarkedIdSet,
-    bookmarkedFishes: serverBookmarks,
-    bookmarkCount: bookmarkedIds.length,
-    isBookmarked,
-    toggleBookmark,
-    isServerMode,
-    isLoading: isServerMode ? bookmarksQuery.isLoading : false,
-    isError: isServerMode ? bookmarksQuery.isError : false,
-  };
+  // Provider value로 내려가므로 참조 안정성 필수 — 매 렌더 새 객체면 모든 소비자(FishCard 등)가 리렌더됨
+  return useMemo(
+    () => ({
+      bookmarkedIds,
+      bookmarkedIdSet,
+      bookmarkedFishes: serverBookmarks,
+      bookmarkCount: bookmarkedIds.length,
+      isBookmarked,
+      toggleBookmark,
+      isServerMode,
+      isLoading: isServerMode ? bookmarksQuery.isLoading : false,
+      isError: isServerMode ? bookmarksQuery.isError : false,
+    }),
+    [
+      bookmarkedIds,
+      bookmarkedIdSet,
+      serverBookmarks,
+      isBookmarked,
+      toggleBookmark,
+      isServerMode,
+      bookmarksQuery.isLoading,
+      bookmarksQuery.isError,
+    ],
+  );
 }
 
 type BookmarksContextValue = ReturnType<typeof useBookmarksState>;
