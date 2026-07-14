@@ -3,6 +3,8 @@ package com.fishnote.price;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fishnote.common.UnauthorizedException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -57,7 +59,10 @@ public class TelegramPriceWebhookController {
         if (webhookSecret == null || webhookSecret.isBlank()) {
             throw new UnauthorizedException("TELEGRAM_WEBHOOK_SECRET is not configured.");
         }
-        if (!webhookSecret.equals(requestSecret)) {
+        // 시크릿 비교는 타이밍 사이드채널 방지를 위해 상수 시간 비교 사용
+        byte[] expected = webhookSecret.getBytes(StandardCharsets.UTF_8);
+        byte[] actual = requestSecret == null ? new byte[0] : requestSecret.getBytes(StandardCharsets.UTF_8);
+        if (!MessageDigest.isEqual(expected, actual)) {
             throw new UnauthorizedException("Invalid Telegram webhook secret.");
         }
     }

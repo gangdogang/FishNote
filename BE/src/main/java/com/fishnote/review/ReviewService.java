@@ -52,6 +52,11 @@ public class ReviewService {
         this.passwordEncoder = passwordEncoder;
         this.helpfulVoteRepository = helpfulVoteRepository;
         this.helpfulVotePepper = helpfulVotePepper;
+        if ("fishnote-helpful-vote".equals(helpfulVotePepper)) {
+            // 기본 pepper 사용 시 voter-key 해시가 예측 가능해짐. 운영에서는 HELPFUL_VOTE_PEPPER 필수 설정.
+            org.slf4j.LoggerFactory.getLogger(ReviewService.class)
+                    .warn("app.helpful-vote.pepper가 기본값입니다. 운영 환경에서는 HELPFUL_VOTE_PEPPER 환경변수를 반드시 설정하세요.");
+        }
     }
 
     @Transactional(readOnly = true)
