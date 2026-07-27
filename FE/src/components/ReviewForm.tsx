@@ -50,7 +50,16 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = [...ACCEPTED_IMAGE_TYPES].join(',');
 const UPLOAD_ERROR_MESSAGE = '사진 업로드에 실패했어요. 사진 없이 등록하거나 다시 시도해 주세요';
+const PREVIEW_ERROR_MESSAGE = '사진 미리보기를 안전하게 만들지 못했어요. 다른 사진을 선택해 주세요';
 const reviewFormFieldOrder: ReviewFormField[] = ['nickname', 'rating', 'content', 'password', 'image'];
+
+function createSafeImagePreviewUrl(file: File): string | null {
+  const previewUrl = URL.createObjectURL(file);
+  if (previewUrl.startsWith('blob:')) return previewUrl;
+
+  URL.revokeObjectURL(previewUrl);
+  return null;
+}
 
 export default function ReviewForm({ submitting, error, resetKey, formRef, onSubmit }: ReviewFormProps) {
   const { user, isAuthenticated } = useAuth();
@@ -73,7 +82,6 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
   const contentInputRef = useRef<HTMLTextAreaElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const previewImageRef = useRef<HTMLImageElement>(null);
   const isBusy = submitting || uploading;
   const isMemberReview = Boolean(isAuthenticated && user);
 
@@ -89,16 +97,8 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
   }, [resetKey]);
 
   useEffect(() => {
-    const previewImage = previewImageRef.current;
-    if (!previewImage || !selectedImage) return;
-
-    // Keep the user-controlled File URL out of JSX/HTML construction. An
-    // HTMLImageElement URL property is a URL sink, not an HTML parsing sink.
-    previewImage.src = selectedImage.previewUrl;
-
     return () => {
-      previewImage.removeAttribute('src');
-      URL.revokeObjectURL(selectedImage.previewUrl);
+      if (selectedImage) URL.revokeObjectURL(selectedImage.previewUrl);
     };
   }, [selectedImage]);
 
@@ -128,10 +128,15 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
       return;
     }
 
-    setSelectedImage({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    });
+    const previewUrl = createSafeImagePreviewUrl(file);
+    if (!previewUrl) {
+      setSelectedImage(null);
+      setFieldErrors((prev) => ({ ...prev, image: PREVIEW_ERROR_MESSAGE }));
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedImage({ file, previewUrl });
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -363,7 +368,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
             {selectedImage ? (
               <div className="relative mt-2 h-24 w-24 overflow-hidden rounded-btn border border-line bg-chipbg">
                 <img
-                  ref={previewImageRef}
+                  src={selectedImage.previewUrl}
                   alt="선택한 후기 사진 미리보기"
                   className="h-full w-full object-cover"
                 />

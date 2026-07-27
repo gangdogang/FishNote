@@ -175,6 +175,23 @@ describe('ReviewForm accessibility', () => {
     );
   });
 
+  it('브라우저가 blob이 아닌 미리보기 URL을 반환하면 폐기하고 거절한다', async () => {
+    const user = userEvent.setup();
+    vi.mocked(URL.createObjectURL).mockReturnValueOnce('javascript:alert(1)');
+    renderReviewForm();
+
+    await user.upload(
+      screen.getByLabelText('사진 추가'),
+      new File(['jpeg'], 'review.jpg', { type: 'image/jpeg' }),
+    );
+
+    expect(screen.queryByAltText('선택한 후기 사진 미리보기')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '사진 미리보기를 안전하게 만들지 못했어요. 다른 사진을 선택해 주세요',
+    );
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('javascript:alert(1)');
+  });
+
   it('업로드 응답의 assetId와 URL을 후기 요청에 함께 전달한다', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
