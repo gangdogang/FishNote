@@ -30,7 +30,7 @@ interface ModalDialogBaseProps {
   onClose: () => void;
   children: ReactNode;
   panelClassName?: string;
-  initialFocusRef?: RefObject<HTMLElement>;
+  initialFocusRef?: RefObject<HTMLElement | null>;
   descriptionId?: string;
   closeDisabled?: boolean;
 }

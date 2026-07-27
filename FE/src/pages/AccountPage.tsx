@@ -1,5 +1,5 @@
 import { FormEvent, useRef, useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router';
 import { Field } from '../components/FormField';
 import { inputClass } from '../lib/uiClasses';
 import { useAuth } from '../hooks/useAuth';

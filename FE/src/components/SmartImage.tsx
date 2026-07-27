@@ -63,9 +63,6 @@ export default function SmartImage({
   const objectPosition = media?.focalPoint
     ? `${focalPointPercentage(media.focalPoint.x)}% ${focalPointPercentage(media.focalPoint.y)}%`
     : undefined;
-  // React 18 forwards the standards-based lowercase attribute without its
-  // unknown-camelCase warning. Browsers expose it as HTMLImageElement.fetchPriority.
-  const fetchPriorityAttribute = { fetchpriority: priority ? 'high' : 'auto' };
   const wrapperClassName = [
     'relative flex min-w-0 w-full max-w-full items-center justify-center overflow-hidden bg-mist',
     className,
@@ -102,7 +99,7 @@ export default function SmartImage({
           alt={alt}
           aria-hidden={decorative || undefined}
           loading={priority ? 'eager' : 'lazy'}
-          {...fetchPriorityAttribute}
+          fetchPriority={priority ? 'high' : 'auto'}
           decoding="async"
           className="h-full min-w-0 w-full max-w-full object-cover"
           style={{ objectPosition }}

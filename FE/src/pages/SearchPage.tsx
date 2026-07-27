@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { chipClass } from '../lib/uiClasses';
 import AppliedFilterBar, { type AppliedFilterPill } from '../components/AppliedFilterBar';
 import FilterPanel from '../components/FilterPanel';

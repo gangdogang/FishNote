@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Fish } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../lib/errors';
 import { consumeKakaoOAuthAttempt, getKakaoCallbackUri } from '../lib/kakaoOAuth';

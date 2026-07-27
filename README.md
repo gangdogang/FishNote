@@ -55,7 +55,7 @@ IMAGE_CLEANUP_INTERVAL=PT10M                           # 정리 주기(ISO-8601 
 IMAGE_CLEANUP_BATCH_SIZE=50                            # 실행당 최대 자산 수(1~1000)
 IMAGE_CLOUDINARY_TIMEOUT_SECONDS=10                    # upload/destroy HTTP timeout(1~60초)
 IMAGE_UPLOAD_GLOBAL_LIMIT=40                           # 10분당 전체 이미지 업로드 상한
-APP_CLIENT_IP_TRUSTED_PROXIES=<verified-render-edge-cidrs> # 신뢰할 reverse proxy CIDR, 쉼표 구분
+APP_CLIENT_IP_TRUSTED_PROXIES=<verified-private-proxy-cidrs> # 별도 private reverse proxy가 있을 때만 설정
 REVIEW_STAT_READ_MODEL_ENABLED=true                   # false면 후기 실시간 집계 fallback
 CATALOG_V2_ENABLED=true                               # /api/v2/fish 공개 여부
 PRICE_IMPORT_BULK_ENABLED=true                        # false면 webhook당 최대 50행 legacy persist 경로
@@ -106,7 +106,7 @@ VITE_KAKAO_REST_API_KEY=<kakao-rest-api-key>
 3. `/fish/{slug}/index.html` 26개, 홈 정적 목록, `sitemap.xml`, private-route용
    `spa-noindex.html` 생성
 
-기본 canonical origin은 `https://fishnote.kr`입니다. 다른 공개 origin으로 빌드할 때는
+기본 canonical origin은 실제 리다이렉트 종착지인 `https://www.fishnote.kr`입니다. 다른 공개 origin으로 빌드할 때는
 `PUBLIC_SITE_URL`을 설정합니다. `PRERENDER_API_BASE_URL`을 설정하면 build가 실제 공개 Fish API도
 읽고, API 어종 수가 26종 catalog와 다르면 실패합니다. 이 변수 없이도 seed/manifest 계약은
 항상 검사하지만 실제 배포 API와의 비교까지 수행하는 것은 아닙니다.
@@ -157,7 +157,7 @@ Base URL: `/api/v1`, `/api/v2` — 상세 명세는 [`docs/04_API명세.md`](doc
 | BE | Render (Web Service) | 루트 디렉터리 `BE`, Docker 빌드(`BE/Dockerfile`), `PORT` 자동 주입 |
 | DB | Neon (serverless PostgreSQL) | 접속 정보를 Render 환경변수로 주입 |
 | 이미지 | Cloudinary | `fishnote/reviews` 폴더 |
-| 도메인 | fishnote.kr → Vercel | |
+| 도메인 | fishnote.kr → www.fishnote.kr → Vercel | |
 
 ### Render 환경변수
 
@@ -182,9 +182,9 @@ IMAGE_CLEANUP_INTERVAL=PT10M
 IMAGE_CLEANUP_BATCH_SIZE=50
 IMAGE_CLOUDINARY_TIMEOUT_SECONDS=10
 IMAGE_UPLOAD_GLOBAL_LIMIT=40
-APP_CLIENT_IP_TRUSTED_PROXIES=<verified-render-edge-cidrs>
-# 실제 proxy chain 검증 전 초기 배포에서는 false, 검증 완료 뒤 true
-RATE_LIMIT_ENABLED=false
+# Render 외에 별도 private reverse proxy를 추가한 경우에만 그 즉시 upstream CIDR을 설정한다.
+APP_CLIENT_IP_TRUSTED_PROXIES=
+RATE_LIMIT_ENABLED=true
 REVIEW_STAT_READ_MODEL_ENABLED=true
 CATALOG_V2_ENABLED=true
 PRICE_IMPORT_BULK_ENABLED=true
@@ -211,13 +211,14 @@ SPRING_FLYWAY_TARGET=17
 되돌리고 새 forward-fix migration을 추가합니다. 운영 DB를 과거 dump로 덮어 배포를 롤백하지
 않습니다. 상세 절차는 [`docs/OPERATIONS.md`](docs/OPERATIONS.md)를 따릅니다.
 
-`APP_CLIENT_IP_TRUSTED_PROXIES`에는 staging에서 확인한 즉시 upstream Render edge CIDR만 넣습니다.
-미설정 또는 잘못된 체인은 `X-Forwarded-For`를 무시하도록 fail-closed 동작합니다. 초기 배포에서는
-`RATE_LIMIT_ENABLED=false`로 두고, 실제 요청 경로에 포함된 Cloudflare와 Render의 proxy chain을
-확인한 뒤 즉시 upstream peer 대역만 등록하고 limiter를 켭니다. 배포 전 같은 실제 클라이언트에서 서로 다른
-`X-Forwarded-For` 값을 보낸 11번째 후기 요청이 동일 bucket의 429가 되는지 확인하고, 다른 네트워크의
-첫 요청은 차단되지 않는지도 함께 확인합니다. 인스턴스를 2개 이상으로 늘리기 전에는 limiter를
-Redis/Bucket4j 기반으로 교체해야 합니다.
+Render 공식 문서는 실제 클라이언트 주소를 `X-Forwarded-For`로 제공하지만 고정 ingress CIDR
+allowlist를 계약으로 제공하지 않습니다. 따라서 추측한 Render/Cloudflare CIDR이나
+`0.0.0.0/0`을 신뢰 목록에 넣지 않습니다. `APP_CLIENT_IP_TRUSTED_PROXIES`는 별도 private reverse
+proxy를 직접 운영할 때만 그 즉시 upstream CIDR로 설정합니다. 미설정이면 전달 헤더를 무시하고
+즉시 peer 기준 actor bucket과 endpoint-global bucket을 함께 적용합니다. `RATE_LIMIT_ENABLED`는
+운영에서 `true`로 유지합니다. `Filter rateLimitFilterRegistration ... (disabled)` 시작 로그는
+Spring Security 체인 밖의 중복 서블릿 등록만 끈 것이며 limiter 비활성화 로그가 아닙니다.
+인스턴스를 2개 이상으로 늘리기 전에는 limiter를 Redis/Bucket4j 기반으로 교체해야 합니다.
 
 후기 이미지는 서버가 발급한 `public_id`와 자산 ID로 추적합니다. 후기 삭제 시 같은 DB
 트랜잭션에서 자산을 삭제 대기로 분리하고, 스케줄러가 작은 batch를 선점한 뒤 DB 트랜잭션
@@ -259,7 +260,7 @@ VITE_API_BASE_URL=https://<render-service>.onrender.com/api/v1
 VITE_CATALOG_V2_ENABLED=true
 VITE_REVIEW_V2_ENABLED=true
 VITE_KAKAO_REST_API_KEY=<kakao-rest-api-key>
-PUBLIC_SITE_URL=https://fishnote.kr
+PUBLIC_SITE_URL=https://www.fishnote.kr
 # 선택: build 시 실제 API count까지 대조할 때만 설정
 PRERENDER_API_BASE_URL=https://<render-service>.onrender.com/api/v1
 ```

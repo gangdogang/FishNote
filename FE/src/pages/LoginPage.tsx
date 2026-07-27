@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { isAxiosError } from 'axios';
 import { Fish } from 'lucide-react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { Field } from '../components/FormField';
 import { inputClass } from '../lib/uiClasses';
 import { useAuth } from '../hooks/useAuth';

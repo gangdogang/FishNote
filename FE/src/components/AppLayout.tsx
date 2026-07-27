@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { BookOpen, CalendarDays, Fish, Heart, Moon, Sun } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
