@@ -41,6 +41,17 @@ const secondFishDetail = {
   similarFishes: [],
 };
 
+const secondFishSources = {
+  fishId: 2,
+  fishName: '우럭',
+  summary: {
+    verificationStatus: 'UNVERIFIED',
+    lastVerifiedAt: null,
+    sourceCount: 0,
+  },
+  claims: [],
+};
+
 async function prepareDetail(page: Page, testInfo: TestInfo) {
   await applyProjectTheme(page, testInfo);
   await mockPublicApi(page);
@@ -232,6 +243,10 @@ test('SPA navigation to another fish clears the previous review draft', async ({
     }
     if (requestUrl.pathname === '/api/v1/fish/2/prices') {
       await fulfillJson(route, 200, { ...emptyPriceSummary, fishId: 2 });
+      return;
+    }
+    if (requestUrl.pathname === '/api/v1/fish/2/sources') {
+      await fulfillJson(route, 200, secondFishSources);
       return;
     }
     if (requestUrl.pathname === '/api/v1/fish/2/reviews') {

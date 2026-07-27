@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,7 +58,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @ActiveProfiles("integration")
 @Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Import(PostgreSqlIntegrityContractIntegrationTest.CountingDataSourceConfiguration.class)
 class PostgreSqlIntegrityContractIntegrationTest {
 
@@ -117,10 +115,12 @@ class PostgreSqlIntegrityContractIntegrationTest {
     @Autowired
     private TelegramPriceWebhookService telegramWebhookService;
 
-    private Long detailFishId;
+    private static Long detailFishId;
 
     @BeforeAll
-    void seedBatchBoundaryFixture() {
+    static void seedBatchBoundaryFixture(
+            @Autowired JdbcTemplate jdbcTemplate,
+            @Autowired CountingDataSource dataSource) {
         detailFishId = jdbcTemplate.queryForObject(
                 """
                 INSERT INTO fish (

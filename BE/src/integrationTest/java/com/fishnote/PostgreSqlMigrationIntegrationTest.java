@@ -538,7 +538,7 @@ class PostgreSqlMigrationIntegrationTest {
             jdbcTemplate.execute("SET LOCAL enable_seqscan = off");
             Map<String, List<String>> plans = new LinkedHashMap<>();
             plans.put("name", jdbcTemplate.queryForList(
-                    "EXPLAIN (COSTS OFF) SELECT id FROM fish WHERE lower(name) LIKE '%도미%'",
+                    "EXPLAIN (COSTS OFF) SELECT id FROM fish WHERE lower(name) LIKE '%감성돔%'",
                     String.class));
             plans.put("nameEn", jdbcTemplate.queryForList(
                     "EXPLAIN (COSTS OFF) SELECT id FROM fish WHERE lower(name_en) LIKE '%seabream%'",
@@ -548,13 +548,13 @@ class PostgreSqlMigrationIntegrationTest {
                     EXPLAIN (COSTS OFF)
                     SELECT f.id
                     FROM fish f
-                    WHERE lower(f.name) LIKE '%도미%'
-                       OR lower(f.name_en) LIKE '%도미%'
+                    WHERE lower(f.name) LIKE '%감성돔%'
+                       OR lower(f.name_en) LIKE '%감성돔%'
                        OR EXISTS (
                            SELECT 1
                            FROM fish_alias a
                            WHERE a.fish_id = f.id
-                             AND lower(a.alias) LIKE '%도미%'
+                             AND lower(a.alias) LIKE '%감성돔%'
                        )
                     """,
                     String.class));
@@ -567,8 +567,8 @@ class PostgreSqlMigrationIntegrationTest {
                                f.name AS name,
                                a.alias AS matched_alias,
                                CASE
-                                   WHEN lower(a.alias) = '도미' THEN 0
-                                   WHEN lower(a.alias) LIKE '도미%' ESCAPE '\\' THEN 1
+                                   WHEN lower(a.alias) = '감성돔' THEN 0
+                                   WHEN lower(a.alias) LIKE '감성돔%' ESCAPE '\\' THEN 1
                                    ELSE 2
                                END AS match_rank,
                                CASE WHEN a.alias_type = 'STANDARD' THEN 0 ELSE 1 END AS alias_rank,
@@ -577,8 +577,8 @@ class PostgreSqlMigrationIntegrationTest {
                                    PARTITION BY f.id
                                    ORDER BY
                                        CASE
-                                           WHEN lower(a.alias) = '도미' THEN 0
-                                           WHEN lower(a.alias) LIKE '도미%' ESCAPE '\\' THEN 1
+                                           WHEN lower(a.alias) = '감성돔' THEN 0
+                                           WHEN lower(a.alias) LIKE '감성돔%' ESCAPE '\\' THEN 1
                                            ELSE 2
                                        END,
                                        CASE WHEN a.alias_type = 'STANDARD' THEN 0 ELSE 1 END,
@@ -588,7 +588,7 @@ class PostgreSqlMigrationIntegrationTest {
                                ) AS fish_match_rank
                         FROM fish_alias a
                         JOIN fish f ON f.id = a.fish_id
-                        WHERE lower(a.alias) LIKE '%도미%' ESCAPE '\\'
+                        WHERE lower(a.alias) LIKE '%감성돔%' ESCAPE '\\'
                     ) ranked
                     WHERE ranked.fish_match_rank = 1
                     ORDER BY ranked.match_rank,
@@ -790,6 +790,7 @@ class PostgreSqlMigrationIntegrationTest {
                 "idx_fish_correction_request_status_created");
 
         OffsetDateTime verifiedAt = OffsetDateTime.parse("2026-07-15T00:00:00Z");
+        OffsetDateTime expandedVerifiedAt = OffsetDateTime.parse("2026-07-25T00:00:00Z");
         String publisher = "인천광역시 수산자원연구소";
         String license = "공공누리 제1유형(출처표시)";
         assertThat(seededSources).containsExactly(
@@ -811,6 +812,26 @@ class PostgreSqlMigrationIntegrationTest {
                         "https://www.incheon.go.kr/fish/FI020401/2142497",
                         LocalDate.of(2023, 8, 14),
                         verifiedAt,
+                        license,
+                        "HIGH"),
+                new SeededFishSource(
+                        8L,
+                        "SEASON",
+                        publisher,
+                        "2020년 6월 어식백세 수산물 \"광어, 농어\"",
+                        "https://www.incheon.go.kr/fish/FI020401/2050291",
+                        LocalDate.of(2020, 6, 8),
+                        expandedVerifiedAt,
+                        license,
+                        "HIGH"),
+                new SeededFishSource(
+                        9L,
+                        "SEASON",
+                        publisher,
+                        "2024년 9월, 어식백세 수산물 \"대하, 전어\"",
+                        "https://www.incheon.go.kr/fish/FI020401/2207048",
+                        LocalDate.of(2024, 9, 11),
+                        expandedVerifiedAt,
                         license,
                         "HIGH"),
                 new SeededFishSource(
@@ -843,6 +864,26 @@ class PostgreSqlMigrationIntegrationTest {
                         verifiedAt,
                         license,
                         "HIGH"),
+                new SeededFishSource(
+                        14L,
+                        "SEASON",
+                        publisher,
+                        "2024년 8월, 어식백세 수산물 \"장어류, 문어\"",
+                        "https://www.incheon.go.kr/fish/FI020401/2203724",
+                        LocalDate.of(2024, 8, 20),
+                        expandedVerifiedAt,
+                        license,
+                        "MEDIUM"),
+                new SeededFishSource(
+                        15L,
+                        "SEASON",
+                        publisher,
+                        "2024년 8월, 어식백세 수산물 \"장어류, 문어\"",
+                        "https://www.incheon.go.kr/fish/FI020401/2203724",
+                        LocalDate.of(2024, 8, 20),
+                        expandedVerifiedAt,
+                        license,
+                        "MEDIUM"),
                 new SeededFishSource(
                         20L,
                         "SEASON",
@@ -1256,7 +1297,7 @@ class PostgreSqlMigrationIntegrationTest {
                 Integer.class);
         assertThat(mismatchesBefore).isZero();
 
-        String marker = "b1-stat-trigger-" + UUID.randomUUID();
+        String marker = "b1stat-" + UUID.randomUUID().toString().substring(0, 8);
         try {
             jdbcTemplate.update(
                     """
@@ -1437,9 +1478,9 @@ class PostgreSqlMigrationIntegrationTest {
                 .isTrue();
         JsonNode sourceVerification = persisted.path("sourceVerification");
         assertThat(sourceVerification.path("status").asText()).isEqualTo("PARTIAL");
-        assertThat(sourceVerification.path("verifiedCount").asInt()).isEqualTo(6);
+        assertThat(sourceVerification.path("verifiedCount").asInt()).isEqualTo(8);
         assertThat(sourceVerification.path("verificationRate").asDouble())
-                .isEqualTo(0.230769);
+                .isEqualTo(0.307692);
     }
 
     private EndpointMeasurement measureEndpoint(String path) throws Exception {
@@ -1546,8 +1587,8 @@ class PostgreSqlMigrationIntegrationTest {
         assertThat(baseline.catalog().missingRepresentativeImageRate()).isZero();
         assertThat(baseline.sourceVerification().implemented()).isTrue();
         assertThat(baseline.sourceVerification().status()).isEqualTo("PARTIAL");
-        assertThat(baseline.sourceVerification().verifiedCount()).isEqualTo(6);
-        assertThat(baseline.sourceVerification().verificationRate()).isEqualTo(0.230769);
+        assertThat(baseline.sourceVerification().verifiedCount()).isEqualTo(8);
+        assertThat(baseline.sourceVerification().verificationRate()).isEqualTo(0.307692);
     }
 
     private double percentileMillis(List<Long> sortedNanos, double percentile) {
