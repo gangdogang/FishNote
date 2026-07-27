@@ -198,7 +198,32 @@ scripts/ops/self_check.sh
 
 이 검사는 Bash 문법, custom-format dump, 24시간 기본값, single-transaction restore, disposable marker와 금지된 destructive 옵션 부재를 확인한다. 실제 백업/복원 검증을 대체하지 않는다.
 
-## 9. 대표 이미지·출처 링크 점검
+## 9. iCloud 충돌 복사본 격리
+
+소스 저장소를 iCloud가 동기화하는 Desktop/Documents 아래에 두면 `Foo 2.java` 같은 충돌
+복사본이 생겨 Java 중복 class 오류와 FE lint 잡음을 만들 수 있다. `.gitignore`로 숨기지 말고
+저장소를 iCloud 밖으로 옮긴다. 이동 전에는 아래 dry-run으로 모든 충돌본에 Git이 추적하는
+원본이 존재하는지 검증한다.
+
+```bash
+scripts/ops/quarantine_icloud_conflicts.sh
+```
+
+검증 후에는 저장소 밖의 새 디렉터리를 지정해 삭제 없이 격리한다. 스크립트는 기존 격리
+디렉터리를 재사용하거나 파일을 덮어쓰지 않으며, 원래 상대 경로와 추적 원본의 대응표를
+`manifest.tsv`로 남긴다.
+
+```bash
+scripts/ops/quarantine_icloud_conflicts.sh \
+  --apply \
+  --quarantine-dir /absolute/path/FishBook-iCloud-conflicts-YYYYMMDD
+```
+
+격리 후 tracked checkout에서 전체 검증을 통과시키고, 새 clone을 iCloud 밖에서 사용한다.
+격리본은 최소 7일 보관한 뒤 manifest와 Git 이력을 대조하고 사람이 휴지통 이동 여부를
+결정한다. 스크립트는 격리본을 자동 삭제하지 않는다.
+
+## 10. 대표 이미지·출처 링크 점검
 
 배포 전 또는 월 1회, manifest에 기록한 대표 이미지와 원문 페이지가 실제로 응답하는지 확인한다.
 외부 호스트 상태에 따라 일시 실패할 수 있으므로 실패 URL을 브라우저에서 재확인한 뒤 교체 여부를 결정한다.

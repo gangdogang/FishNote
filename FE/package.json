@@ -3,6 +3,10 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": "22.x",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "vite",
     "build": "node scripts/export-prerender-catalog.mjs --check && tsc -b && vite build && node scripts/prerender.mjs",
