@@ -23,9 +23,10 @@ const emptyForm: LoginFormState = {
 };
 
 const LOGIN_FAILURE_MESSAGE = '이메일 또는 비밀번호를 확인해 주세요';
+const LOGIN_FIELD_ORDER: ReadonlyArray<keyof LoginFormState> = ['email', 'password'];
 
 export default function LoginPage() {
-  usePageMeta('로그인');
+  usePageMeta('로그인', undefined, null, { noindex: true });
   const [form, setForm] = useState<LoginFormState>(emptyForm);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
   const [formError, setFormError] = useState('');
@@ -53,6 +54,7 @@ export default function LoginPage() {
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
       setFormError('');
+      focusFirstInvalidField(event.currentTarget, nextErrors, LOGIN_FIELD_ORDER);
       return;
     }
 
@@ -94,14 +96,19 @@ export default function LoginPage() {
       <AuthBrand />
       <h1 className="mb-6 mt-0 text-24 font-extrabold leading-tight text-ink">다시 오셨네요</h1>
 
-      {formError ? <p className="mb-3 mt-0 text-13 font-medium leading-snug text-red-700 dark:text-red-400">{formError}</p> : null}
+      {formError ? (
+        <p role="alert" className="mb-3 mt-0 text-13 font-medium leading-snug text-red-700 dark:text-red-400">
+          {formError}
+        </p>
+      ) : null}
 
       {kakaoOAuthConfigured ? (
         <>
           <button
             type="button"
             onClick={handleKakaoLogin}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-btn border-0 bg-[#FEE500] px-5 py-2.5 text-sm font-bold text-[rgba(0,0,0,0.85)] transition hover:bg-[#F4DC00] focus:outline-none focus:ring-2 focus:ring-[#FEE500] focus:ring-offset-2"
+            disabled={submitting}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-btn border-0 bg-[#FEE500] px-5 py-2.5 text-body-sm font-bold text-[rgba(0,0,0,0.85)] transition hover:bg-[#F4DC00] focus:outline-none focus:ring-2 focus:ring-[#FEE500] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <KakaoLogo />
             카카오로 계속하기
@@ -118,12 +125,12 @@ export default function LoginPage() {
         <Field label="이메일" htmlFor="login-email" error={fieldErrors.email}>
           <input
             id="login-email"
+            name="email"
             type="email"
             autoComplete="email"
             value={form.email}
             disabled={submitting}
             placeholder="email@example.com"
-            aria-invalid={Boolean(fieldErrors.email)}
             onChange={(event) => updateField('email', event.target.value)}
             className={inputClass(Boolean(fieldErrors.email))}
           />
@@ -132,12 +139,12 @@ export default function LoginPage() {
         <Field label="비밀번호" htmlFor="login-password" error={fieldErrors.password}>
           <input
             id="login-password"
+            name="password"
             type="password"
             autoComplete="current-password"
             value={form.password}
             disabled={submitting}
             placeholder="비밀번호"
-            aria-invalid={Boolean(fieldErrors.password)}
             onChange={(event) => updateField('password', event.target.value)}
             className={inputClass(Boolean(fieldErrors.password))}
           />
@@ -146,7 +153,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-1 inline-flex min-h-11 w-full items-center justify-center rounded-btn border-0 bg-sea px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
+          className="mt-1 inline-flex min-h-11 w-full items-center justify-center rounded-btn border-0 bg-primary px-5 py-2.5 text-body-sm font-bold text-on-primary transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
         >
           {submitting ? '확인 중...' : '로그인'}
         </button>
@@ -155,14 +162,14 @@ export default function LoginPage() {
       {kakaoOAuthConfigured ? (
         <p className="mb-0 mt-3 text-center text-12.5 leading-[1.6] text-ink-mute">
           카카오로 계속하면 FishNote의{' '}
-          <Link to="/terms" className="font-semibold text-sea underline-offset-2 hover:underline">이용약관</Link>과{' '}
-          <Link to="/privacy" className="font-semibold text-sea underline-offset-2 hover:underline">개인정보처리방침</Link>을 확인한 것으로 봅니다.
+          <Link to="/terms" className="font-semibold text-accent underline-offset-2 hover:underline">이용약관</Link>과{' '}
+          <Link to="/privacy" className="font-semibold text-accent underline-offset-2 hover:underline">개인정보처리방침</Link>을 확인한 것으로 봅니다.
         </p>
       ) : null}
 
       <p className="mb-0 mt-5 text-center text-13 font-medium text-ink-mute">
         처음이세요?{' '}
-        <Link to="/signup" state={switchState} className="font-bold text-sea transition hover:text-sea-deep">
+        <Link to="/signup" state={switchState} className="font-bold text-accent transition hover:text-accent-hover">
           회원가입
         </Link>
       </p>
@@ -172,18 +179,18 @@ export default function LoginPage() {
 
 function AuthPageShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="mx-auto flex max-w-content justify-center px-4 pb-20 pt-12 sm:px-7 sm:pt-16">
+    <div className="mx-auto flex max-w-content justify-center px-4 pb-20 pt-12 sm:px-7 sm:pt-16">
       <section className="w-full max-w-[400px] rounded-card border border-line bg-surface px-5 py-6 sm:px-6 sm:py-7">
         {children}
       </section>
-    </main>
+    </div>
   );
 }
 
 function AuthBrand() {
   return (
-    <div className="mb-5 flex items-center gap-2 text-ink" aria-label="FishNote">
-      <Fish className="h-4 w-[26px] flex-none text-sea" aria-hidden />
+    <div className="mb-5 flex items-center gap-2 text-ink">
+      <Fish className="h-4 w-[26px] flex-none text-accent" aria-hidden />
       <span className="text-17 font-extrabold leading-none">FishNote</span>
     </div>
   );
@@ -213,4 +220,14 @@ function validateLoginForm(form: LoginFormState) {
 
 function isEmailLike(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function focusFirstInvalidField(
+  form: HTMLFormElement,
+  errors: LoginFieldErrors,
+  fieldOrder: ReadonlyArray<keyof LoginFormState>,
+) {
+  const firstInvalidField = fieldOrder.find((field) => Boolean(errors[field]));
+  const control = firstInvalidField ? form.elements.namedItem(firstInvalidField) : null;
+  if (control instanceof HTMLElement) control.focus();
 }

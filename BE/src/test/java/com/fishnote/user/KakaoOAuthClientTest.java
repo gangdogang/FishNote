@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withBadRequest;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import org.junit.jupiter.api.Test;
@@ -78,6 +79,64 @@ class KakaoOAuthClientTest {
                 "http://localhost:5173/auth/kakao/callback"))
                 .isInstanceOfSatisfying(KakaoOAuthException.class, exception ->
                         assertThat(exception.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED));
+        server.verify();
+    }
+
+    @Test
+    void malformedTokenResponseBecomesSanitizedBadGateway() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KakaoOAuthClient client = new KakaoOAuthClient("rest-key", "client-secret", builder.build());
+
+        server.expect(once(), requestTo(TOKEN_URL))
+                .andRespond(withSuccess(
+                        "{\"access_token\":\"sensitive-token\"",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.authenticate("sensitive-code", "https://safe.example/callback"))
+                .isInstanceOfSatisfying(KakaoOAuthException.class, exception -> {
+                    assertThat(exception.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY);
+                    assertThat(exception.getMessage())
+                            .doesNotContain("sensitive-token", "sensitive-code", "client-secret");
+                });
+        server.verify();
+    }
+
+    @Test
+    void malformedUserResponseBecomesSanitizedBadGateway() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KakaoOAuthClient client = new KakaoOAuthClient("rest-key", "client-secret", builder.build());
+
+        server.expect(once(), requestTo(TOKEN_URL))
+                .andRespond(withSuccess(
+                        "{\"access_token\":\"sensitive-token\"}",
+                        MediaType.APPLICATION_JSON));
+        server.expect(once(), requestTo(USER_INFO_URL))
+                .andRespond(withSuccess(
+                        "{\"id\":\"not-a-number\",\"email\":\"sensitive@example.com\"}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.authenticate("sensitive-code", "https://safe.example/callback"))
+                .isInstanceOfSatisfying(KakaoOAuthException.class, exception -> {
+                    assertThat(exception.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY);
+                    assertThat(exception.getMessage())
+                            .doesNotContain("sensitive-token", "sensitive-code", "sensitive@example.com");
+                });
+        server.verify();
+    }
+
+    @Test
+    void upstreamServerErrorBecomesBadGateway() {
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        KakaoOAuthClient client = new KakaoOAuthClient("rest-key", "client-secret", builder.build());
+
+        server.expect(once(), requestTo(TOKEN_URL)).andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.authenticate("code", "https://safe.example/callback"))
+                .isInstanceOfSatisfying(KakaoOAuthException.class, exception ->
+                        assertThat(exception.getStatus()).isEqualTo(HttpStatus.BAD_GATEWAY));
         server.verify();
     }
 }

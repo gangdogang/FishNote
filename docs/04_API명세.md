@@ -1,7 +1,8 @@
 # FishNote — REST API 명세서
 
-> Base URL: `/api/v1`  ·  Content-Type: `application/json`
-> 모든 응답은 DTO 기반 JSON. 에러는 §6 표준 포맷.
+> Base URL: `/api/v1`, `/api/v2`  ·  Content-Type: `application/json`
+> §2~§9는 v1 초기 계약의 이력이고, Phase 5의 additive 현행 계약은 §10 이후를 함께 적용한다.
+> 모든 응답은 DTO 기반 JSON. 에러는 §7·§15 표준 포맷.
 
 ---
 
@@ -18,6 +19,15 @@
 | POST | `/reviews/{id}/helpful` | 도움돼요 (회원 또는 익명 식별자별 1회) |
 | DELETE | `/auth/me` | 현재 비밀번호 확인 후 회원 탈퇴 |
 | POST | `/auth/kakao` | 카카오 인가 코드 교환 후 FishNote JWT 발급 |
+| GET | `/fish/suggestions` | 이름·영문명·시장 별칭 자동완성 |
+| GET | `/fish/{id|slug}/sources` | 주장별 출처·검증 상태 |
+| POST | `/fish/{id}/corrections` | 오류 제보(202) |
+| GET | `/home` | 홈 seasonal/featured/catalog/facets 통합 |
+| GET | `/api/v2/fish` | cursor 목록·facets·alias 검색 |
+| GET | `/api/v2/fish/{id|slug}` | projection 기반 상세 |
+| GET | `/api/v2/fish/{id}/reviews` | cursor 후기·선택 summary |
+| GET | `/actuator/health/liveness` | 프로세스 liveness |
+| GET | `/actuator/health/readiness` | DB 포함 readiness |
 
 ---
 
@@ -190,7 +200,10 @@
   "timestamp": "2026-07-01T12:30:00Z",
   "status": 400,
   "error": "Bad Request",
+  "code": "VALIDATION_FAILED",
   "message": "content는 필수입니다.",
+  "fieldErrors": { "content": "content는 필수입니다." },
+  "traceId": "8f97...",
   "path": "/api/v1/fish/1/reviews"
 }
 ```
@@ -260,9 +273,343 @@
 { "id": 101, "helpfulCount": 5 }
 ```
 
-### 9-5. 저장(북마크) — 백엔드 없음
-- v1은 **프론트 localStorage**로 처리. 저장한 fish id 목록을 보관하고, "저장한 도감"은 그 id들을 `GET /fish` 결과에서 필터링(생선 수가 적어 클라이언트 필터로 충분).
-- (선택) 다건 조회가 필요하면 `GET /fish?ids=1,3,5` 추가 가능.
+### 9-5. 저장(북마크) — 비회원 fallback + 회원 API
+- 비회원은 기존처럼 프론트 `localStorage`에 저장한다.
+- 회원은 `/api/v1/me/bookmarks`를 사용하고 로그인 직후 `POST /me/bookmarks/merge`로 localStorage를
+  서버에 병합한다. 세부 계약은 §14와 `docs/09_인증_내도감_설계.md`를 따른다.
 
 ### 9-6. 인기 검색 태그(히어로)
 - 백엔드 불필요. 프론트 정적 목록(예: 광어, 방어, 연어, 참돔).
+
+---
+
+## 10. 현행 Fish read API
+
+### 10-1. v1 additive 필드와 identifier
+
+`GET /api/v1/fish` 배열 계약은 유지한다. summary에는 기존 필드 외에 다음이 추가됐다.
+
+```json
+{
+  "id": 1,
+  "slug": "gwangeo",
+  "category": "FISH",
+  "name": "광어",
+  "media": {
+    "id": "1",
+    "url": "https://...",
+    "width": 4032,
+    "height": 3024,
+    "alt": "수족관 바닥에 몸을 붙이고 있는 광어 한 마리",
+    "role": "PRIMARY",
+    "credit": "Totti",
+    "sourceUrl": "https://commons.wikimedia.org/...",
+    "license": "CC BY-SA 4.0",
+    "focalPoint": { "x": 0.5, "y": 0.57 },
+    "blurDataUrl": null
+  },
+  "imageUrl": "https://...",
+  "reviewCount": 12,
+  "ratingCount": 10,
+  "avgRating": 4.3
+}
+```
+
+`GET /api/v1/fish/{identifier}`와 v2 detail의 `identifier`는 숫자 ID 또는 slug다. detail에는
+`scientificName`, `aliases`, `media`, `galleryMedia`, `ratingCount`가 additive하게 포함되며,
+`imageUrl`·`images`는 구 FE fallback을 위해 유지한다. `ratingCount=0`이면 `reviewCount>0`이어도
+별점 평균을 평점처럼 노출하지 않는다.
+
+### 10-2. `GET /api/v2/fish`
+
+쿼리:
+
+| 파라미터 | 기본/범위 | 설명 |
+|---|---|---|
+| `search` | 선택 | 이름·영문명·별칭 검색 |
+| `season` | 선택 | `spring/summer/fall/autumn/winter` |
+| `taste` | 선택 | 맛 태그 |
+| `priceLevel` | 선택, 1~3 | 가격대 |
+| `month` | 선택, 1~12 | 제철 월 |
+| `featured` | 선택 | 규칙형 추천 대상 |
+| `category` | 선택 | `FISH/SHELLFISH/CEPHALOPOD` |
+| `sort` | `popular` | `popular` 또는 `name` |
+| `limit` | 24, 1~100 | page 크기 |
+| `cursor` | 선택 | 직전 응답의 opaque Base64URL cursor |
+
+```json
+{
+  "items": [],
+  "pageInfo": {
+    "nextCursor": "eyJ2ZXJzaW9uIjoxLC4uLn0",
+    "hasNext": true,
+    "limit": 24
+  },
+  "facets": {
+    "taste": { "담백": 10 },
+    "season": { "winter": 8 },
+    "priceLevel": { "1": 5, "2": 12, "3": 9 },
+    "category": { "FISH": 25, "SHELLFISH": 1 }
+  }
+}
+```
+
+cursor는 정렬 기준과 version을 포함하며 클라이언트가 해석하거나 수정하지 않는다. 형식 오류,
+다른 sort의 cursor 재사용, 필수 위치값 누락은 400 `INVALID_CURSOR`다.
+
+### 10-3. `GET /api/v1/fish/suggestions`
+
+`q`는 필수, `limit`은 기본 8이다. 공백을 정규화하고 이름·영문명·별칭을 점수화한다.
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "slug": "gwangeo",
+      "name": "광어",
+      "matchedAlias": "넙치",
+      "thumbnail": "https://..."
+    }
+  ]
+}
+```
+
+## 11. Review v2 cursor API
+
+```http
+GET /api/v2/fish/{fishId}/reviews
+    ?sort=latest|helpful
+    &limit=20
+    &cursor=...
+    &includeSummary=true|false
+```
+
+- `limit`: 1~100
+- 첫 page는 `includeSummary=true`로 summary+items를 읽는다.
+- 다음 page는 `includeSummary=false`로 보내면 summary가 `null`이고 cursor 목록만 읽는다.
+- `latest` cursor: `(createdAt,id)`, `helpful` cursor: `(helpfulCount,createdAt,id)`
+- 로그인 요청의 item에는 요청자 기준 `mine`이 포함된다.
+- 사용자별 `mine`/helpful 상태가 있으므로 응답은 `private, no-store`다.
+
+```json
+{
+  "fishId": 1,
+  "summary": {
+    "avgRating": 4.3,
+    "reviewCount": 12,
+    "ratingCount": 10,
+    "ratingDistribution": { "1": 0, "2": 0, "3": 1, "4": 5, "5": 4 }
+  },
+  "items": [],
+  "pageInfo": { "nextCursor": null, "hasNext": false, "limit": 20 }
+}
+```
+
+## 12. 출처·오류 제보
+
+### 12-1. `GET /api/v1/fish/{id|slug}/sources`
+
+claim 순서는 `IDENTITY`, `SEASON`, `TASTE`, `PRICE`, `PHOTO`다. 출처가 없는 claim도 생략하지
+않고 `UNVERIFIED`, `sourceCount=0`, 빈 `sources`로 반환한다.
+
+```json
+{
+  "fishId": 1,
+  "fishName": "광어",
+  "summary": {
+    "verificationStatus": "VERIFIED",
+    "lastVerifiedAt": "2026-07-23T00:00:00+09:00",
+    "sourceCount": 1
+  },
+  "claims": [
+    {
+      "claimType": "PHOTO",
+      "verificationStatus": "VERIFIED",
+      "lastVerifiedAt": "2026-07-23T00:00:00+09:00",
+      "sourceCount": 1,
+      "sources": [
+        {
+          "id": 7,
+          "claimType": "PHOTO",
+          "publisher": "Wikimedia Commons",
+          "title": "광어 대표 사진 원문",
+          "url": "https://...",
+          "publishedAt": null,
+          "verifiedAt": "2026-07-23T00:00:00+09:00",
+          "license": "CC BY-SA 4.0",
+          "confidence": "HIGH"
+        }
+      ]
+    }
+  ]
+}
+```
+
+overall/claim status는 HIGH가 하나 이상이면 `VERIFIED`, 출처는 있으나 HIGH가 없으면
+`PARTIALLY_VERIFIED`, 없으면 `UNVERIFIED`다.
+
+### 12-2. `POST /api/v1/fish/{fishId}/corrections`
+
+```json
+{
+  "claimType": "SEASON",
+  "message": "제철 월을 다시 확인해 주세요.",
+  "sourceUrl": "https://example.org/evidence"
+}
+```
+
+- `message`: trim 후 필수, Unicode code point 기준 1~1000자
+- `sourceUrl`: 선택, 사용자정보 없는 절대 `http/https`, 최대 2048자
+- 성공: 202 `{ "id": 1, "status": "PENDING" }`
+- 공개 쓰기이므로 actor/global rate limit과 `private, no-store`를 적용한다.
+
+## 13. 홈·가격 projection
+
+### 13-1. `GET /api/v1/home`
+
+```http
+GET /api/v1/home?month=7&sort=popular
+```
+
+`month`는 필수 1~12, `sort`는 `popular|name`이다. 현재 26종 catalog 한 page에서 세 섹션을
+파생하며 FE 홈은 이 endpoint를 한 번만 호출한다.
+
+```json
+{
+  "month": 7,
+  "generatedAt": "2026-07-23T00:00:00Z",
+  "seasonal": [],
+  "featured": [],
+  "catalog": [],
+  "facets": {
+    "taste": {}, "season": {}, "priceLevel": {}, "category": {}
+  }
+}
+```
+
+### 13-2. `GET /api/v1/fish/{fishId}/prices`
+
+| 파라미터 | 기본/범위 | 설명 |
+|---|---|---|
+| `days` | 14, 1~30으로 보정 | 관측 기간 |
+| `resolution` | `DAY` | `DAY/WEEK/MONTH` |
+| `maxPoints` | 30, 1~200으로 보정 | series 최대 point |
+| `variantKey` | 선택, 최대 300자 | 양식/자연산·산지·단위 variant |
+
+응답은 `rawText`·speaker·원문 어종명을 SELECT/직렬화하지 않는 projection이다.
+
+```json
+{
+  "fishId": 1,
+  "days": 14,
+  "resolution": "DAY",
+  "maxPoints": 30,
+  "variantKey": null,
+  "asOf": "2026-07-23T08:00:00+09:00",
+  "currency": "KRW",
+  "normalizedUnit": "kg",
+  "sourceCount": 2,
+  "noDataReason": null,
+  "observationCount": 4,
+  "latest": {},
+  "recent": [],
+  "dailyAverage": [],
+  "byShop": [],
+  "byVariant": []
+}
+```
+
+기간 내 관측이 없으면 `NO_OBSERVATIONS_IN_RANGE`, 선택 variant가 없으면
+`VARIANT_NOT_FOUND`이고, 두 경우 모두 정상 200 응답 안에서 `latest=null`과 빈 series를 반환한다.
+
+## 14. 북마크 원자 API 보강
+
+`/api/v1/me/bookmarks/**`는 Bearer 인증이 필요하고 `private, no-store`다.
+
+- `PUT /me/bookmarks/{fishId}`: PostgreSQL `INSERT ... SELECT ... ON CONFLICT DO NOTHING`, 204
+- `DELETE /me/bookmarks/{fishId}`: 멱등, 204
+- `POST /me/bookmarks/merge`: `fishIds` 필수, item은 non-null, 최대 500개
+
+```json
+{ "fishIds": [1, 3, 3, 999999] }
+```
+
+```json
+{ "acceptedCount": 2, "skippedCount": 2 }
+```
+
+`acceptedCount`는 존재하는 distinct Fish 수다. `skippedCount`는 전체 입력 수에서 accepted를 뺀
+값이므로 존재하지 않는 ID뿐 아니라 중복 입력도 포함한다. 이미 저장된 row도 유효 Fish라 accepted에
+포함되며 unique key로 중복 저장하지 않는다.
+
+## 15. 오류·캐시·상태 계약
+
+### 15-1. 오류 코드
+
+표준 body:
+
+```json
+{
+  "timestamp": "2026-07-23T00:00:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "code": "INVALID_QUERY_PARAMETER",
+  "message": "month는 1~12 사이여야 합니다.",
+  "fieldErrors": {},
+  "traceId": "8f97...",
+  "path": "/api/v1/home"
+}
+```
+
+| 상황 | HTTP | `code` |
+|---|---:|---|
+| DTO validation | 400 | `VALIDATION_FAILED` |
+| 잘못된 query/path type·값 | 400 | `INVALID_QUERY_PARAMETER` |
+| 누락 query | 400 | `MISSING_QUERY_PARAMETER` |
+| 읽을 수 없는 JSON | 400 | `INVALID_REQUEST_BODY` |
+| cursor 위변조/형식/sort 불일치 | 400 | `INVALID_CURSOR` |
+| 지원하지 않는 Content-Type | 415 | `UNSUPPORTED_MEDIA_TYPE` |
+| 인증/권한/리소스 | 401/403/404 | `UNAUTHORIZED/FORBIDDEN/NOT_FOUND` |
+| 실제 business conflict | 409 | `CONFLICT` |
+| flag OFF | 503 | `FEATURE_DISABLED` |
+| 처리되지 않은 서버 오류 | 500 | `INTERNAL_SERVER_ERROR` |
+
+429는 같은 trace contract와 `RATE_LIMITED`, `resetAt`을 반환한다. constraint 이름, stack trace,
+token, 후기 원문은 응답/일반 로그에 노출하지 않는다. 모든 응답에는 `X-Trace-Id`가 있다.
+
+### 15-2. HTTP/server cache
+
+| 경로군 | HTTP | 서버 Caffeine |
+|---|---|---|
+| v1/v2 Fish list, `/home` | `public, max-age=60` | catalog 30분/최대 512, home 1분/최대 64 |
+| v1/v2 Fish detail | `public, max-age=300` + SHA-256 ETag/304 | detail 5분/최대 256 |
+| price | `public, max-age=180` | price 5분/최대 1024 |
+| review/auth/me/bookmark/image/correction | `private, no-store` | public cache 없음 |
+| 4xx/5xx | `private, no-store` | 해당 없음 |
+
+review mutation commit 후 detail/catalog/home을 무효화하고, price import commit 후 touched Fish의
+price key만 무효화한다. 캐시는 process-local 최적화이며 source of truth가 아니다.
+`PUBLIC_CACHE_ENABLED=false`면 public 응답도 `no-store`이고 서버 cache는 NoOp이다.
+
+### 15-3. health
+
+- `GET /actuator/health/liveness`: JVM process 상태
+- `GET /actuator/health/readiness`: `readinessState,db`; DB 장애 시 503/DOWN
+- `GET /api/v1/health`: legacy liveness 안내와 readiness URL만 반환하며 readiness 대용이 아님
+
+운영 배포에서 health 상세는 공개하지 않는다. 실제 readiness·캐시·latency 검증 절차는
+[`OPERATIONS.md`](OPERATIONS.md)를 따른다.
+
+### 15-4. 기능 flag
+
+| 환경변수 | OFF 동작 |
+|---|---|
+| `CATALOG_V2_ENABLED` | `/api/v2/fish/**` 503 `FEATURE_DISABLED` |
+| `SOURCES_ENABLED` | `/api/v1/fish/{id|slug}/sources` 503 `FEATURE_DISABLED` |
+| `REVIEW_STAT_READ_MODEL_ENABLED` | `fish_review_stat` 대신 live aggregate 사용 |
+| `PRICE_IMPORT_BULK_ENABLED` | webhook당 최대 50행의 legacy persist 경로 사용 |
+| `PUBLIC_CACHE_ENABLED` | Caffeine는 NoOp, 공개 응답도 `no-store` |
+
+현재 property 기본값은 모두 true다. 점진 배포에서는 코드를 배포하기 전 환경변수를 false로
+명시한 뒤 하나씩 전환한다.

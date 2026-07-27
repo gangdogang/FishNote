@@ -1,4 +1,4 @@
-import { createContext, createElement, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { addMyBookmark, bookmarksMeQueryKey, deleteMyBookmark, getMyBookmarks } from '../api/bookmarks';
 import {
@@ -6,9 +6,10 @@ import {
   subscribeLocalBookmarks,
   writeLocalBookmarks,
 } from '../lib/bookmarkStorage';
-import type { FishSummary } from '../types/fish';
-import { useToast } from '../components/Toast';
+import type { FishCategory, FishMedia, FishSummary } from '../types/fish';
+import { useToast } from './useToast';
 import { useAuth } from './useAuth';
+import { trackAnalyticsEvent } from '../lib/analytics';
 
 type BookmarkSnapshot = number[];
 
@@ -39,6 +40,13 @@ function useBookmarksState() {
   const serverBookmarkedIds = useMemo(() => serverBookmarks.map((fish) => fish.id), [serverBookmarks]);
   const bookmarkedIds = isServerMode ? serverBookmarkedIds : localBookmarkedIds;
   const bookmarkedIdSet = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
+  const serverMutationPendingRef = useRef(false);
+  const mutationAccessTokenRef = useRef(accessToken);
+
+  useEffect(() => {
+    mutationAccessTokenRef.current = accessToken;
+    serverMutationPendingRef.current = false;
+  }, [accessToken]);
 
   const toggleBookmarkMutation = useMutation<void, unknown, ToggleBookmarkVariables, ToggleBookmarkContext>({
     mutationFn: ({ fishId, shouldBookmark }) => (shouldBookmark ? addMyBookmark(fishId) : deleteMyBookmark(fishId)),
@@ -62,7 +70,15 @@ function useBookmarksState() {
     onError: (_error, _variables, context) => {
       queryClient.setQueryData(bookmarksMeQueryKey, context?.previousBookmarks ?? []);
     },
+    onSuccess: (_data, { fishId, shouldBookmark }) => {
+      trackAnalyticsEvent('bookmark_changed', {
+        fishId,
+        action: shouldBookmark ? 'saved' : 'removed',
+        authenticated: true,
+      });
+    },
     onSettled: () => {
+      serverMutationPendingRef.current = false;
       queryClient.invalidateQueries({ queryKey: bookmarksMeQueryKey });
     },
   });
@@ -77,6 +93,11 @@ function useBookmarksState() {
         const nextIds = isAdding ? [...currentIds, fishId] : currentIds.filter((id) => id !== fishId);
 
         writeLocalBookmarks(nextIds);
+        trackAnalyticsEvent('bookmark_changed', {
+          fishId,
+          action: isAdding ? 'saved' : 'removed',
+          authenticated: false,
+        });
         if (isAdding) {
           // 익명 저장은 이 기기에만 남는다는 사실을 저장 시점에 알려 로그인 전환 기회를 만든다
           showToast('저장했어요 · 로그인하면 다른 기기에서도 볼 수 있어요');
@@ -84,6 +105,8 @@ function useBookmarksState() {
         return;
       }
 
+      if (serverMutationPendingRef.current) return;
+      serverMutationPendingRef.current = true;
       const shouldBookmark = !bookmarkedIdSet.has(fishId);
       toggleBookmarkMutation.mutate({ fishId, shouldBookmark });
       if (shouldBookmark) {
@@ -103,8 +126,10 @@ function useBookmarksState() {
       isBookmarked,
       toggleBookmark,
       isServerMode,
+      isBookmarkMutationPending: isServerMode && toggleBookmarkMutation.isPending,
       isLoading: isServerMode ? bookmarksQuery.isLoading : false,
       isError: isServerMode ? bookmarksQuery.isError : false,
+      refetchBookmarks: bookmarksQuery.refetch,
     }),
     [
       bookmarkedIds,
@@ -113,8 +138,10 @@ function useBookmarksState() {
       isBookmarked,
       toggleBookmark,
       isServerMode,
+      toggleBookmarkMutation.isPending,
       bookmarksQuery.isLoading,
       bookmarksQuery.isError,
+      bookmarksQuery.refetch,
     ],
   );
 }
@@ -166,7 +193,10 @@ function normalizeFishSummary(value: unknown, fishId: number): FishSummary | nul
 
   return {
     id: maybeFish.id,
+    slug: typeof maybeFish.slug === 'string' ? maybeFish.slug : null,
+    category: normalizeFishCategory(maybeFish.category),
     name: maybeFish.name,
+    media: normalizeFishMedia(maybeFish.media),
     imageUrl: typeof maybeFish.imageUrl === 'string' ? maybeFish.imageUrl : null,
     description: typeof maybeFish.description === 'string' ? maybeFish.description : null,
     priceLevel: typeof maybeFish.priceLevel === 'number' ? maybeFish.priceLevel : null,
@@ -183,7 +213,10 @@ function normalizeFishSummary(value: unknown, fishId: number): FishSummary | nul
 function createOptimisticFishSummary(fishId: number): FishSummary {
   return {
     id: fishId,
-    name: '저장한 생선',
+    slug: null,
+    category: 'FISH',
+    name: '저장한 횟감',
+    media: null,
     imageUrl: null,
     description: null,
     priceLevel: null,
@@ -193,4 +226,49 @@ function createOptimisticFishSummary(fishId: number): FishSummary {
     avgRating: 0,
     reviewCount: 0,
   };
+}
+
+function normalizeFishCategory(value: unknown): FishCategory {
+  return value === 'SHELLFISH' || value === 'CEPHALOPOD' ? value : 'FISH';
+}
+
+function normalizeFishMedia(value: unknown): FishMedia | null {
+  if (!value || typeof value !== 'object') return null;
+
+  const media = value as Partial<FishMedia>;
+  if (
+    typeof media.id !== 'string'
+    || typeof media.url !== 'string'
+    || typeof media.width !== 'number'
+    || !Number.isFinite(media.width)
+    || media.width <= 0
+    || typeof media.height !== 'number'
+    || !Number.isFinite(media.height)
+    || media.height <= 0
+    || typeof media.alt !== 'string'
+    || (media.role !== 'PRIMARY' && media.role !== 'GALLERY')
+  ) {
+    return null;
+  }
+
+  const normalized: FishMedia = {
+    id: media.id,
+    url: media.url,
+    width: media.width,
+    height: media.height,
+    alt: media.alt,
+    role: media.role,
+  };
+  if (typeof media.credit === 'string') normalized.credit = media.credit;
+  if (typeof media.sourceUrl === 'string') normalized.sourceUrl = media.sourceUrl;
+  if (typeof media.license === 'string') normalized.license = media.license;
+  if (typeof media.blurDataUrl === 'string') normalized.blurDataUrl = media.blurDataUrl;
+  if (
+    media.focalPoint
+    && Number.isFinite(media.focalPoint.x)
+    && Number.isFinite(media.focalPoint.y)
+  ) {
+    normalized.focalPoint = { x: media.focalPoint.x, y: media.focalPoint.y };
+  }
+  return normalized;
 }

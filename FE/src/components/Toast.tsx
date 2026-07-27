@@ -1,15 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ToastContext } from '../hooks/useToast';
 
 interface ToastState {
   id: number;
   message: string;
 }
-
-interface ToastContextValue {
-  showToast: (message: string) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
 
 const TOAST_DURATION_MS = 3200;
 
@@ -31,7 +26,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* 모바일 하단 탭바 위로 띄우고, 데스크톱에서는 하단 여백만 */}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-6">
+      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-[calc(5rem+var(--safe-area-bottom))] z-50 flex justify-center px-4 md:bottom-6">
         {toast ? (
           <div
             key={toast.id}
@@ -44,10 +39,4 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error('useToast must be used within ToastProvider');
-  return context;
 }

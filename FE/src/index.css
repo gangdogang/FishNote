@@ -4,6 +4,16 @@
 
 /* 색 토큰 — tailwind.config.js가 이 변수들을 참조한다 (rgb 채널값) */
 :root {
+  --c-accent: 15 110 132; /* 링크·아이콘 */
+  --c-accent-hover: 12 90 108;
+  --c-accent-soft: 227 240 243;
+  --c-primary: 15 110 132; /* 채운 컨트롤 */
+  --c-primary-hover: 12 90 108;
+  --c-on-primary: 255 255 255;
+  --c-focus: 15 110 132;
+  --c-control-border: 126 141 148; /* mist 대비 3.22:1, surface 대비 3.43:1 */
+  --c-hero-surface: 10 40 54;
+  --c-on-hero: 255 255 255;
   --c-sea: 15 110 132; /* #0F6E84 */
   --c-sea-soft: 227 240 243; /* #E3F0F3 */
   --c-sea-deep: 12 90 108; /* #0C5A6C */
@@ -12,15 +22,27 @@
   --c-mist: 246 248 249; /* #F6F8F9 */
   --c-line: 227 234 237; /* #E3EAED */
   --c-chipbg: 238 243 245; /* #EEF3F5 */
-  --c-star: 224 160 48; /* #E0A030 */
+  --c-star: 155 98 0; /* mist 대비 4.76:1, surface 대비 5.07:1 */
   --c-surface: 255 255 255; /* 카드·헤더 배경 */
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 
   color: rgb(var(--c-ink));
   background: rgb(var(--c-mist));
-  font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
 }
 
 .dark {
+  --c-accent: 95 182 200;
+  --c-accent-hover: 138 203 218;
+  --c-accent-soft: 21 58 68;
+  --c-primary: 26 115 135; /* surface 대비 3.00:1, 흰 텍스트 대비 5.46:1 */
+  --c-primary-hover: 30 122 143; /* surface 대비 3.30:1, 흰 텍스트 대비 4.96:1 */
+  --c-on-primary: 255 255 255;
+  --c-focus: 95 182 200;
+  --c-control-border: 95 112 120; /* surface 대비 3.18:1, mist 대비 3.55:1 */
+  --c-hero-surface: 10 40 54;
+  --c-on-hero: 255 255 255;
   --c-sea: 62 159 179; /* 어두운 배경 대비 밝힌 teal */
   --c-sea-soft: 21 58 68;
   --c-sea-deep: 95 182 200; /* hover 시 더 밝게 */
@@ -40,7 +62,8 @@ body {
   min-width: 320px;
   background: rgb(var(--c-mist));
   color: rgb(var(--c-ink));
-  font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-family: "Pretendard Variable", Pretendard, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
   font-size: 15px;
   line-height: 1.7;
 }

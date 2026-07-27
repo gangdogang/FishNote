@@ -1,5 +1,7 @@
 package com.fishnote.price;
 
+import com.fishnote.fish.FishAlias;
+import com.fishnote.fish.FishAliasRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -7,6 +9,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -42,10 +47,27 @@ public class ShopPriceParser {
             Pattern.CASE_INSENSITIVE);
     private static final Pattern GRADE = Pattern.compile("(SSSS|SSS|SS|S|특대|대|중|소)", Pattern.CASE_INSENSITIVE);
 
-    private final Map<String, String> aliases;
+    /**
+     * Alias precedence is shared with scripts/kakao_price_parser.py:
+     * longest compact alias, then earliest occurrence, then lexical alias/canonical name.
+     */
+    private static final Comparator<AliasCandidate> ALIAS_MATCH_ORDER = Comparator
+            .comparingInt(AliasCandidate::aliasLength)
+            .reversed()
+            .thenComparingInt(AliasCandidate::compactStart)
+            .thenComparing(AliasCandidate::compactAlias)
+            .thenComparing(AliasCandidate::canonicalFishName);
 
-    public ShopPriceParser() {
-        this.aliases = buildAliases();
+    private final Supplier<Map<String, String>> aliasSupplier;
+
+    @Autowired
+    public ShopPriceParser(FishAliasRepository fishAliasRepository) {
+        this.aliasSupplier = () -> loadAliases(fishAliasRepository);
+    }
+
+    ShopPriceParser(Map<String, String> aliases) {
+        Map<String, String> sorted = sortAliases(aliases);
+        this.aliasSupplier = () -> sorted;
     }
 
     public List<ParsedShopPrice> parse(String text, OffsetDateTime fallbackObservedAt) {
@@ -58,14 +80,26 @@ public class ShopPriceParser {
             return List.of();
         }
 
+        Map<String, String> aliases = aliasSupplier.get();
+
         return splitByShop(text, fallbackSourceName).stream()
-                .flatMap(segment -> parseSegment(segment.text(), fallbackObservedAt, sourceType, segment.sourceName()).stream())
+                .flatMap(segment -> parseSegment(
+                                segment.text(),
+                                fallbackObservedAt,
+                                sourceType,
+                                segment.sourceName(),
+                                aliases)
+                        .stream())
                 .distinct()
                 .toList();
     }
 
     private List<ParsedShopPrice> parseSegment(
-            String text, OffsetDateTime fallbackObservedAt, String sourceType, String fallbackSourceName) {
+            String text,
+            OffsetDateTime fallbackObservedAt,
+            String sourceType,
+            String fallbackSourceName,
+            Map<String, String> aliases) {
         OffsetDateTime observedAt = inferObservedAt(text, fallbackObservedAt);
         String sourceName = firstNonBlank(inferShopFromText(text), fallbackSourceName);
         String speaker = firstNonBlank(sourceName, "텔레그램");
@@ -88,7 +122,7 @@ public class ShopPriceParser {
             }
 
             String lineForParse = enrichLine(line, originContext, farmingContext);
-            AliasMatch alias = extractAlias(lineForParse).orElse(null);
+            AliasMatch alias = extractAlias(lineForParse, aliases).orElse(null);
             if (alias == null) {
                 continue;
             }
@@ -161,15 +195,34 @@ public class ShopPriceParser {
         return "";
     }
 
-    private Optional<AliasMatch> extractAlias(String line) {
-        String compact = line.replace(" ", "");
+    private Optional<AliasMatch> extractAlias(String line, Map<String, String> aliases) {
+        CompactedLine compactLine = compactLine(line);
+        AliasCandidate best = null;
         for (Map.Entry<String, String> entry : aliases.entrySet()) {
-            String alias = entry.getKey();
-            if (!alias.isBlank() && compact.contains(alias.replace(" ", ""))) {
-                return Optional.of(new AliasMatch(entry.getValue(), alias));
+            String alias = compact(entry.getKey());
+            if (alias.isBlank()) {
+                continue;
+            }
+            int compactStart = compactLine.value().indexOf(alias);
+            if (compactStart < 0) {
+                continue;
+            }
+
+            AliasCandidate candidate = new AliasCandidate(
+                    entry.getValue(),
+                    alias,
+                    alias.codePointCount(0, alias.length()),
+                    compactStart);
+            if (best == null || ALIAS_MATCH_ORDER.compare(candidate, best) < 0) {
+                best = candidate;
             }
         }
-        return Optional.empty();
+
+        if (best == null) {
+            return Optional.empty();
+        }
+        String reportedName = compactLine.sourceSlice(best.compactStart(), best.compactAlias().length());
+        return Optional.of(new AliasMatch(best.canonicalFishName(), reportedName));
     }
 
     private Optional<PriceMatch> extractPrice(String line) {
@@ -353,40 +406,91 @@ public class ShopPriceParser {
         return new BigDecimal(value);
     }
 
-    private Map<String, String> buildAliases() {
+    private Map<String, String> loadAliases(FishAliasRepository fishAliasRepository) {
         Map<String, String> map = new LinkedHashMap<>();
-        addAliases(map, "광어", "광어", "찰광어", "제주광어");
-        addAliases(map, "방어", "방어", "부시리", "잿방어");
-        // 감성돔은 도감에 별도 어종(id 11)으로 존재 — 참돔 별칭으로 묶으면 시세가 잘못 연결됨
-        addAliases(map, "참돔", "참돔", "도미");
-        addAliases(map, "감성돔", "감성돔");
-        addAliases(map, "농어", "농어", "대농어", "점농어");
-        addAliases(map, "연어", "연어");
-        addAliases(map, "우럭", "우럭");
-        addAliases(map, "민어", "민어");
-        addAliases(map, "전어", "전어");
-        addAliases(map, "도다리", "도다리", "돌도다리");
-        addAliases(map, "가자미", "가자미");
-        addAliases(map, "붉바리", "붉바리");
-        addAliases(map, "능성어", "능성어");
-        addAliases(map, "자바리", "자바리", "대왕자바리");
-        addAliases(map, "돌돔", "돌돔", "줄돔", "일본줄돔");
-        addAliases(map, "전복", "전복", "완도전복");
-        addAliases(map, "시마아지", "시마아지");
-        addAliases(map, "어름돔", "어름돔");
-        addAliases(map, "점성어", "점성어", "점 성 어");
-        return map.entrySet().stream()
-                .sorted((a, b) -> Integer.compare(b.getKey().length(), a.getKey().length()))
-                .collect(LinkedHashMap::new, (result, entry) -> result.put(entry.getKey(), entry.getValue()), Map::putAll);
+        for (FishAlias alias : fishAliasRepository.findAllWithFish()) {
+            String compactAlias = compact(alias.getAlias());
+            String previous = map.putIfAbsent(compactAlias, alias.getFish().getName());
+            if (previous != null && !previous.equals(alias.getFish().getName())) {
+                throw new IllegalStateException("하나의 어종 별칭이 여러 표준명에 연결되어 있습니다.");
+            }
+        }
+        return sortAliases(map);
     }
 
-    private void addAliases(Map<String, String> map, String canonicalFishName, String... aliases) {
-        for (String alias : aliases) {
-            map.put(alias, canonicalFishName);
+    private Map<String, String> sortAliases(Map<String, String> aliases) {
+        Map<String, String> compactAliases = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : aliases.entrySet()) {
+            String compactAlias = compact(entry.getKey());
+            String previous = compactAliases.putIfAbsent(compactAlias, entry.getValue());
+            if (previous != null && !previous.equals(entry.getValue())) {
+                throw new IllegalStateException("하나의 어종 별칭이 여러 표준명에 연결되어 있습니다.");
+            }
         }
+
+        LinkedHashMap<String, String> sorted = compactAliases.entrySet().stream()
+                .sorted((a, b) -> {
+                    int lengthOrder = Integer.compare(
+                            b.getKey().codePointCount(0, b.getKey().length()),
+                            a.getKey().codePointCount(0, a.getKey().length()));
+                    if (lengthOrder != 0) {
+                        return lengthOrder;
+                    }
+                    int aliasOrder = a.getKey().compareTo(b.getKey());
+                    return aliasOrder != 0 ? aliasOrder : a.getValue().compareTo(b.getValue());
+                })
+                .collect(
+                        LinkedHashMap::new,
+                        (result, entry) -> result.put(entry.getKey(), entry.getValue()),
+                        Map::putAll);
+        return Collections.unmodifiableMap(sorted);
+    }
+
+    private String compact(String value) {
+        StringBuilder result = new StringBuilder(value.length());
+        value.codePoints()
+                .filter(codePoint -> !isAliasWhitespace(codePoint))
+                .forEach(result::appendCodePoint);
+        return result.toString();
+    }
+
+    private CompactedLine compactLine(String source) {
+        StringBuilder value = new StringBuilder(source.length());
+        List<Integer> sourceOffsets = new ArrayList<>(source.length());
+        for (int sourceOffset = 0; sourceOffset < source.length(); ) {
+            int codePoint = source.codePointAt(sourceOffset);
+            int width = Character.charCount(codePoint);
+            if (!isAliasWhitespace(codePoint)) {
+                value.appendCodePoint(codePoint);
+                for (int index = 0; index < width; index++) {
+                    sourceOffsets.add(sourceOffset + index);
+                }
+            }
+            sourceOffset += width;
+        }
+        return new CompactedLine(source, value.toString(), List.copyOf(sourceOffsets));
+    }
+
+    private boolean isAliasWhitespace(int codePoint) {
+        return Character.isWhitespace(codePoint) || Character.isSpaceChar(codePoint);
     }
 
     private record AliasMatch(String canonicalFishName, String reportedName) {}
+
+    private record AliasCandidate(
+            String canonicalFishName,
+            String compactAlias,
+            int aliasLength,
+            int compactStart) {}
+
+    private record CompactedLine(String source, String value, List<Integer> sourceOffsets) {
+
+        String sourceSlice(int compactStart, int compactLength) {
+            int sourceStart = sourceOffsets.get(compactStart);
+            int sourceEnd = sourceOffsets.get(compactStart + compactLength - 1) + 1;
+            return source.substring(sourceStart, sourceEnd);
+        }
+    }
 
     private record PriceMatch(int minKrw, int maxKrw, BigDecimal confidence) {}
 

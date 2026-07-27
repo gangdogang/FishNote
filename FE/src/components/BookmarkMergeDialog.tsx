@@ -9,11 +9,11 @@ import {
   isBookmarkMergeDismissed,
   readLocalBookmarks,
 } from '../lib/bookmarkStorage';
+import ModalDialog from './ModalDialog';
 
 export default function BookmarkMergeDialog() {
   const [fishIds, setFishIds] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const titleId = useId();
   const descriptionId = useId();
   const mergeButtonRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
@@ -53,11 +53,15 @@ export default function BookmarkMergeDialog() {
       if (!getStoredAccessToken()) {
         setFishIds([]);
         setErrorMessage('');
+        return;
       }
+
+      maybeOpenMergeDialog();
     }
 
     window.addEventListener(AUTH_SUCCESS_EVENT, maybeOpenMergeDialog);
     window.addEventListener(ACCESS_TOKEN_CHANGE_EVENT, handleAccessTokenChange);
+    maybeOpenMergeDialog();
 
     return () => {
       window.removeEventListener(AUTH_SUCCESS_EVENT, maybeOpenMergeDialog);
@@ -65,66 +69,45 @@ export default function BookmarkMergeDialog() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    mergeButtonRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') handleLater();
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleLater, isOpen]);
-
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/45 px-4 py-6">
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        className="w-full max-w-[360px] rounded-card border border-line bg-surface px-5 py-5 shadow-[0_20px_50px_rgba(26,43,51,0.22)]"
-      >
-        <h2 id={titleId} className="m-0 text-20 font-extrabold leading-snug text-ink">
-          이 기기에 저장한 생선 {fishIds.length}종이 있어요
-        </h2>
-        <p id={descriptionId} className="mb-0 mt-2 text-14 leading-[1.6] text-ink-mute">
-          내 도감으로 옮길까요?
+    <ModalDialog
+      open={isOpen}
+      onClose={handleLater}
+      closeDisabled={mergeMutation.isPending}
+      title={`이 기기에 저장한 횟감 ${fishIds.length}종이 있어요`}
+      descriptionId={descriptionId}
+      initialFocusRef={mergeButtonRef}
+      panelClassName="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[360px] rounded-card border border-line px-5 py-5 shadow-[0_20px_50px_rgba(26,43,51,0.22)]"
+    >
+      <p id={descriptionId} className="mb-0 mt-0 text-14 leading-[1.6] text-ink-mute">
+        내 도감으로 옮길까요?
+      </p>
+
+      {errorMessage ? (
+        <p role="alert" className="mb-0 mt-3 rounded-btn bg-red-50 dark:bg-red-950/40 px-3 py-2 text-13 font-medium text-red-700 dark:text-red-400">
+          {errorMessage}
         </p>
+      ) : null}
 
-        {errorMessage ? (
-          <p role="alert" className="mb-0 mt-3 rounded-btn bg-red-50 dark:bg-red-950/40 px-3 py-2 text-13 font-medium text-red-700 dark:text-red-400">
-            {errorMessage}
-          </p>
-        ) : null}
-
-        <div className="mt-5 grid grid-cols-2 gap-2.5">
-          <button
-            ref={mergeButtonRef}
-            type="button"
-            disabled={mergeMutation.isPending}
-            onClick={() => mergeMutation.mutate(fishIds)}
-            className="inline-flex min-h-11 items-center justify-center rounded-btn border-0 bg-sea px-4 py-2.5 text-sm font-bold text-white transition hover:bg-sea-deep disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
-          >
-            {mergeMutation.isPending ? '옮기는 중...' : '옮기기'}
-          </button>
-          <button
-            type="button"
-            disabled={mergeMutation.isPending}
-            onClick={handleLater}
-            className="inline-flex min-h-11 items-center justify-center rounded-btn border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-sea hover:text-sea disabled:cursor-not-allowed disabled:text-ink-mute"
-          >
-            나중에
-          </button>
-        </div>
-      </section>
-    </div>
+      <div className="mt-5 grid grid-cols-2 gap-2.5">
+        <button
+          ref={mergeButtonRef}
+          type="button"
+          disabled={mergeMutation.isPending}
+          onClick={() => mergeMutation.mutate(fishIds)}
+          className="inline-flex min-h-11 items-center justify-center rounded-btn border-0 bg-primary px-4 py-2.5 text-body-sm font-bold text-on-primary transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600"
+        >
+          {mergeMutation.isPending ? '옮기는 중...' : '옮기기'}
+        </button>
+        <button
+          type="button"
+          disabled={mergeMutation.isPending}
+          onClick={handleLater}
+          className="inline-flex min-h-11 items-center justify-center rounded-btn border border-line bg-surface px-4 py-2.5 text-body-sm font-bold text-ink transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:text-ink-mute"
+        >
+          나중에
+        </button>
+      </div>
+    </ModalDialog>
   );
 }

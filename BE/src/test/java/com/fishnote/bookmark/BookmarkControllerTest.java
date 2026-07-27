@@ -99,6 +99,8 @@ class BookmarkControllerTest {
                 .andExpect(jsonPath("$[0].name", is("광어")))
                 .andExpect(jsonPath("$[0].avgRating", is(4.5)))
                 .andExpect(jsonPath("$[0].reviewCount", is(2)))
+                .andExpect(jsonPath("$[0].tasteTags.length()", is(2)))
+                .andExpect(jsonPath("$[0].seasonMonths.length()", is(2)))
                 .andExpect(jsonPath("$[1].id", is(yellowtail.getId().intValue())));
 
         mockMvc.perform(delete("/api/v1/me/bookmarks/{fishId}", flounder.getId())
@@ -122,7 +124,7 @@ class BookmarkControllerTest {
         mockMvc.perform(put("/api/v1/me/bookmarks/{fishId}", 999_999L)
                         .header("Authorization", bearer(token)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message", is("생선을 찾을 수 없습니다.")));
+                .andExpect(jsonPath("$.message", is("횟감을 찾을 수 없습니다.")));
     }
 
     @Test
@@ -130,10 +132,12 @@ class BookmarkControllerTest {
         String token = signupAndLogin("merge@example.com");
 
         mockMvc.perform(post("/api/v1/me/bookmarks/merge")
-                        .header("Authorization", bearer(token))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(Map.of("fishIds", List.of(999_999L, seabream.getId(), seabream.getId(), flounder.getId())))))
-                .andExpect(status().isNoContent());
+                .header("Authorization", bearer(token))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json(Map.of("fishIds", List.of(999_999L, seabream.getId(), seabream.getId(), flounder.getId())))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.acceptedCount", is(2)))
+                .andExpect(jsonPath("$.skippedCount", is(2)));
 
         mockMvc.perform(get("/api/v1/me/bookmarks")
                         .header("Authorization", bearer(token)))
@@ -141,6 +145,21 @@ class BookmarkControllerTest {
                 .andExpect(jsonPath("$.length()", is(2)))
                 .andExpect(jsonPath("$[0].id", is(seabream.getId().intValue())))
                 .andExpect(jsonPath("$[1].id", is(flounder.getId().intValue())));
+    }
+
+    @Test
+    void mergeRejectsMoreThanFiveHundredFishIds() throws Exception {
+        String token = signupAndLogin("merge-limit@example.com");
+        List<Long> fishIds = java.util.stream.LongStream.rangeClosed(1, 501)
+                .boxed()
+                .toList();
+
+        mockMvc.perform(post("/api/v1/me/bookmarks/merge")
+                        .header("Authorization", bearer(token))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("fishIds", fishIds))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("fishIds는 500개 이하여야 합니다.")));
     }
 
     @Test

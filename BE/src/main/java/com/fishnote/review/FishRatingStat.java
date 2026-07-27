@@ -7,4 +7,6 @@ public interface FishRatingStat {
     Double getAvgRating();
 
     long getReviewCount();
+
+    long getRatingCount();
 }

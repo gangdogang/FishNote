@@ -1,0 +1,351 @@
+[
+  {
+    "id": 1,
+    "name": "광어",
+    "description": "담백하고 쫄깃한 국민 흰살회",
+    "seasonMonths": [
+      1,
+      2,
+      11,
+      12
+    ],
+    "slug": "gwangeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Paralichthys_olivaceus_Umigatari.jpg"
+  },
+  {
+    "id": 2,
+    "name": "방어",
+    "description": "겨울에 기름 오른 진한 풍미의 생선",
+    "seasonMonths": [
+      1,
+      2,
+      11,
+      12
+    ],
+    "slug": "bangeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/28/Japanese_amberjack_by_Vincent_C_Chen.jpg"
+  },
+  {
+    "id": 3,
+    "name": "우럭",
+    "description": "쫄깃한 식감과 시원한 국물 맛",
+    "seasonMonths": [
+      4,
+      5,
+      6
+    ],
+    "slug": "ureok",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Sebastes_schlegelii_Muroran.jpg"
+  },
+  {
+    "id": 4,
+    "name": "참돔",
+    "description": "잔칫상에 잘 어울리는 고급 흰살생선",
+    "seasonMonths": [
+      3,
+      4,
+      5
+    ],
+    "slug": "chamdom",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b6/Pagrus_major_ioworld.jpg"
+  },
+  {
+    "id": 5,
+    "name": "연어",
+    "description": "부드럽고 고소한, 연중 즐기는 인기 생선",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "slug": "yeoneo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2e/Salmo_salar_221451741_%28cropped%29.jpg"
+  },
+  {
+    "id": 7,
+    "name": "민어",
+    "description": "복날에 찾는 여름 보양 횟감",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "mineo",
+    "imageUrl": "https://www.nifs.go.kr/cmmn/images/MF0003239_DG0115_watermark.jpg"
+  },
+  {
+    "id": 8,
+    "name": "농어",
+    "description": "여름 흰살회의 산뜻한 기준",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "nongeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Lateolabrax_japonicus_Iwaki.jpg"
+  },
+  {
+    "id": 9,
+    "name": "전어",
+    "description": "가을이면 생각나는 고소한 국민 생선",
+    "seasonMonths": [
+      9,
+      10,
+      11
+    ],
+    "slug": "jeoneo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e7/Konosirus_punctatus.JPG"
+  },
+  {
+    "id": 10,
+    "name": "도다리",
+    "description": "봄 하면 도다리, 쑥국으로도 유명",
+    "seasonMonths": [
+      3,
+      4,
+      5
+    ],
+    "slug": "dodari",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/16/Pleuronichthys_cornutus_at_Osaka_aquarium.jpg"
+  },
+  {
+    "id": 11,
+    "name": "감성돔",
+    "description": "겨울 낚시꾼들이 최고로 치는 돔",
+    "seasonMonths": [
+      1,
+      2,
+      10,
+      11,
+      12
+    ],
+    "slug": "gamseongdom",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Acanthopagrus_schlegelii.JPG"
+  },
+  {
+    "id": 12,
+    "name": "돌돔",
+    "description": "횟감의 황제로 불리는 고급 어종",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "doldom",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Striped_beakfish_Oplegnathus_fasciatus.jpg"
+  },
+  {
+    "id": 13,
+    "name": "병어",
+    "description": "고소하고 부드러운 여름 별미",
+    "seasonMonths": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "slug": "byeongeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/68/Pampus_argenteus_100969499.jpg"
+  },
+  {
+    "id": 14,
+    "name": "갯장어",
+    "description": "여름 남해안의 별미, 하모",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "gaetjangeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Pike_conger.jpg"
+  },
+  {
+    "id": 15,
+    "name": "붕장어",
+    "description": "아나고회로 친숙한 바닷장어",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "bungjangeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Conger_myriaster.jpg"
+  },
+  {
+    "id": 16,
+    "name": "가숭어",
+    "description": "겨울 횟집 가성비 대표, 참숭어",
+    "seasonMonths": [
+      1,
+      2,
+      11,
+      12
+    ],
+    "slug": "gasungeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6c/Liza_haematocheila_by_OpenCage.jpg"
+  },
+  {
+    "id": 17,
+    "name": "고등어",
+    "description": "산지에서만 맛보던 기름진 별미",
+    "seasonMonths": [
+      9,
+      10,
+      11,
+      12
+    ],
+    "slug": "godeungeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/24/Scomber_japonicus_San_Diego.jpg"
+  },
+  {
+    "id": 18,
+    "name": "갈치",
+    "description": "제주 은갈치로 유명한 부드러운 맛",
+    "seasonMonths": [
+      7,
+      8,
+      9,
+      10
+    ],
+    "slug": "galchi",
+    "imageUrl": "https://www.nifs.go.kr/cmmn/images/MF00043931_watermark.jpg"
+  },
+  {
+    "id": 19,
+    "name": "숭어",
+    "description": "봄이 제철인 보리숭어",
+    "seasonMonths": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "slug": "sungeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Flathead-mullet-Aquarium-Of-The-Pacific.png"
+  },
+  {
+    "id": 20,
+    "name": "가자미",
+    "description": "도다리와 형제뻘인 담백한 흰살 횟감",
+    "seasonMonths": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "slug": "gajami",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/9/97/Flatfish_%2814670301310%29.jpg"
+  },
+  {
+    "id": 21,
+    "name": "붉바리",
+    "description": "귀해서 더 유명한 최고급 바리류",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "bulgbari",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Epinephelus_akaara-2_by_OpenCage.jpg"
+  },
+  {
+    "id": 22,
+    "name": "능성어",
+    "description": "제주에서 구문쟁이로 불리는 고급 바리류",
+    "seasonMonths": [
+      9,
+      10,
+      11
+    ],
+    "slug": "neungseongeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/da/Epinephelus_septemfasciatus_Enosui1.jpg"
+  },
+  {
+    "id": 23,
+    "name": "자바리",
+    "description": "제주 다금바리로 불리는 최고급 횟감",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "jabari",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Epinephelus_bruneus_AQUAS.jpg"
+  },
+  {
+    "id": 24,
+    "name": "전복",
+    "description": "오독오독 씹는 맛의 바다 보양 별미",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "slug": "jeonbok",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1d/Haliotis_discus_hannai_01.JPG"
+  },
+  {
+    "id": 25,
+    "name": "시마아지",
+    "description": "스시집 단골 고급 흰살, 줄무늬전갱이",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "shimaaji",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/18/Silver_Trevally_%28Pseudocaranx_dentex%29.jpg"
+  },
+  {
+    "id": 26,
+    "name": "어름돔",
+    "description": "시장에서 가끔 만나는 귀한 돔",
+    "seasonMonths": [
+      6,
+      7,
+      8
+    ],
+    "slug": "eoreumdom",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/85/KoshoDI.jpg"
+  },
+  {
+    "id": 27,
+    "name": "점성어",
+    "description": "민어를 닮은 가성비 대중 횟감",
+    "seasonMonths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "slug": "jeomseongeo",
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Sciaenops_ocellatus_%28FDA_212%29.jpg"
+  }
+]

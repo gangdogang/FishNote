@@ -1,85 +1,54 @@
 package com.fishnote.price;
 
-import com.fishnote.fish.Fish;
-import com.fishnote.fish.FishRepository;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TelegramPriceImportService {
 
     private final ShopPriceParser parser;
-    private final ShopPriceObservationRepository shopPriceObservationRepository;
-    private final FishRepository fishRepository;
+    private final PriceImportPersistenceService persistenceService;
+    private final boolean bulkEnabled;
 
     public TelegramPriceImportService(
             ShopPriceParser parser,
-            ShopPriceObservationRepository shopPriceObservationRepository,
-            FishRepository fishRepository) {
+            PriceImportPersistenceService persistenceService) {
+        this(parser, persistenceService, true);
+    }
+
+    @Autowired
+    public TelegramPriceImportService(
+            ShopPriceParser parser,
+            PriceImportPersistenceService persistenceService,
+            @Value("${app.price-import.bulk.enabled:true}") boolean bulkEnabled) {
         this.parser = parser;
-        this.shopPriceObservationRepository = shopPriceObservationRepository;
-        this.fishRepository = fishRepository;
+        this.persistenceService = persistenceService;
+        this.bulkEnabled = bulkEnabled;
     }
 
-    @Transactional
+    /** Parses before entering the persistence service's transaction. */
     public TelegramPriceImportResponse importText(String text, OffsetDateTime fallbackObservedAt) {
+        return importText(text, fallbackObservedAt, null);
+    }
+
+    public TelegramPriceImportResponse importText(
+            String text,
+            OffsetDateTime fallbackObservedAt,
+            String replyChatId) {
         List<ParsedShopPrice> parsedRows = parser.parse(text, fallbackObservedAt);
-        int savedCount = 0;
         LinkedHashSet<String> sourceNames = new LinkedHashSet<>();
-
-        for (ParsedShopPrice row : parsedRows) {
-            if (!row.sourceName().isBlank()) {
-                sourceNames.add(row.sourceName());
-            }
-            if (shopPriceObservationRepository.existsDuplicate(
-                    row.observedAt(),
-                    row.sourceType(),
-                    row.sourceName(),
-                    row.reportedName(),
-                    row.priceMinKrw(),
-                    row.priceMaxKrw(),
-                    row.rawText())) {
-                continue;
-            }
-
-            shopPriceObservationRepository.save(toEntity(row));
-            savedCount++;
+        parsedRows.stream()
+                .map(ParsedShopPrice::sourceName)
+                .filter(sourceName -> sourceName != null && !sourceName.isBlank())
+                .forEach(sourceNames::add);
+        List<String> sources = List.copyOf(sourceNames);
+        if (bulkEnabled) {
+            return persistenceService.persist(parsedRows, sources, replyChatId);
         }
-
-        return new TelegramPriceImportResponse(parsedRows.size(), savedCount, List.copyOf(sourceNames));
-    }
-
-    private ShopPriceObservation toEntity(ParsedShopPrice row) {
-        ShopPriceObservation observation = new ShopPriceObservation();
-        observation.setFish(findFish(row.canonicalFishName()));
-        observation.setObservedAt(row.observedAt());
-        observation.setSourceType(row.sourceType());
-        observation.setSourceName(blankToNull(row.sourceName()));
-        observation.setSpeaker(blankToNull(row.speaker()));
-        observation.setCanonicalFishName(blankToNull(row.canonicalFishName()));
-        observation.setReportedName(row.reportedName());
-        observation.setCondition(blankToNull(row.condition()));
-        observation.setOrigin(blankToNull(row.origin()));
-        observation.setSizeGrade(blankToNull(row.sizeGrade()));
-        observation.setUnit(blankToNull(row.unit()));
-        observation.setPriceMinKrw(row.priceMinKrw());
-        observation.setPriceMaxKrw(row.priceMaxKrw());
-        observation.setConfidence(row.confidence());
-        observation.setRawText(row.rawText());
-        return observation;
-    }
-
-    private Fish findFish(String canonicalFishName) {
-        if (canonicalFishName == null || canonicalFishName.isBlank()) {
-            return null;
-        }
-        return fishRepository.findByName(canonicalFishName).orElse(null);
-    }
-
-    private String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value;
+        return persistenceService.persistLegacy(parsedRows, sources, replyChatId);
     }
 }

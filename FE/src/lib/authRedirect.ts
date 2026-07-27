@@ -34,7 +34,7 @@ export function getAuthSwitchState(redirectPath: string) {
 }
 
 function isSafeRedirectPath(path: string) {
-  if (!path.startsWith('/') || path.startsWith('//')) return false;
+  if (!path.startsWith('/') || path.startsWith('//') || path.includes('\\')) return false;
 
   const pathname = path.split(/[?#]/, 1)[0];
   return !AUTH_PATHS.has(pathname);

@@ -4,6 +4,26 @@ interface ApiErrorBody {
   message?: string;
 }
 
+export function getHttpStatus(error: unknown) {
+  return isAxiosError(error) ? error.response?.status : undefined;
+}
+
+export function isValidResourceId(id: number) {
+  return Number.isSafeInteger(id) && id > 0;
+}
+
+/**
+ * Read queries retry one transient failure at most. Client errors are expected
+ * to stay unchanged on retry, while a missing response represents a network
+ * failure and 5xx responses can recover on the next request.
+ */
+export function retryTransientQueryOnce(failureCount: number, error: unknown) {
+  if (failureCount >= 1) return false;
+
+  const status = getHttpStatus(error);
+  return status === undefined || status >= 500;
+}
+
 export function getErrorMessage(error: unknown) {
   if (isAxiosError(error)) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {

@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Field } from '../components/FormField';
 import { inputClass } from '../lib/uiClasses';
@@ -6,41 +6,69 @@ import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../lib/errors';
 import { usePageMeta } from '../hooks/usePageMeta';
 
+interface DeleteAccountFieldErrors {
+  password?: string;
+  confirmation?: string;
+}
+
+const DELETE_PASSWORD_ID = 'delete-password';
+const DELETE_CONFIRMATION_ID = 'delete-confirmation';
+const DELETE_SERVER_ERROR_ID = 'delete-account-server-error';
+
 export default function AccountPage() {
-  usePageMeta('계정 관리');
+  usePageMeta('계정 관리', undefined, null, { noindex: true });
   const location = useLocation();
   const navigate = useNavigate();
   const { accessToken, user, isAuthLoading, deleteAccount, deleteAccountMutation } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<DeleteAccountFieldErrors>({});
+  const [serverError, setServerError] = useState('');
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const confirmationInputRef = useRef<HTMLInputElement>(null);
   const requiresPassword = Boolean(user?.hasPassword);
 
   if (!accessToken) return <Navigate to="/login" replace state={{ from: location }} />;
 
   if (isAuthLoading || !user) {
-    return <main className="mx-auto max-w-[720px] px-4 pb-20 pt-12 text-sm text-ink-mute sm:px-7">계정 정보를 확인하고 있어요...</main>;
+    return <div className="mx-auto max-w-[720px] px-4 pb-20 pt-12 text-sm text-ink-mute sm:px-7">계정 정보를 확인하고 있어요...</div>;
   }
 
   async function handleDelete(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (deleteAccountMutation.isPending) return;
+
+    const nextErrors: DeleteAccountFieldErrors = {};
+    if (requiresPassword && password.length === 0) {
+      nextErrors.password = '현재 비밀번호를 입력해 주세요.';
+    }
     if (confirmation !== '탈퇴합니다') {
-      setError('확인 문구를 정확히 입력해 주세요.');
+      nextErrors.confirmation = '확인 문구를 정확히 입력해 주세요.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setServerError('');
+      if (nextErrors.password) {
+        passwordInputRef.current?.focus();
+      } else {
+        confirmationInputRef.current?.focus();
+      }
       return;
     }
 
-    setError('');
+    setFieldErrors({});
+    setServerError('');
     try {
       await deleteAccount({ password: requiresPassword ? password : undefined });
       navigate('/', { replace: true });
     } catch (requestError) {
-      setError(getErrorMessage(requestError));
+      setServerError(getErrorMessage(requestError));
     }
   }
 
   return (
-    <main className="mx-auto w-full max-w-[720px] px-4 pb-20 pt-9 sm:px-7 sm:pt-12">
+    <div className="mx-auto w-full max-w-[720px] px-4 pb-20 pt-9 sm:px-7 sm:pt-12">
       <h1 className="m-0 text-28 font-extrabold tracking-[-0.03em] text-ink">계정 관리</h1>
       <p className="mb-8 mt-2 text-14.5 text-ink-mute">내 정보와 계정 삭제를 관리할 수 있어요.</p>
 
@@ -60,37 +88,69 @@ export default function AccountPage() {
           저장한 도감과 계정 정보는 삭제됩니다. 작성한 후기는 작성자 정보와 분리되어 익명으로 남을 수 있으니, 원하지 않는 후기는 먼저 삭제해 주세요.
         </p>
 
-        <form onSubmit={handleDelete} className="grid gap-4" noValidate>
+        <form onSubmit={handleDelete} className="grid gap-4" noValidate aria-busy={deleteAccountMutation.isPending}>
           {requiresPassword ? (
-            <Field label="현재 비밀번호" htmlFor="delete-password">
+            <Field
+              label="현재 비밀번호"
+              htmlFor={DELETE_PASSWORD_ID}
+              helper="계정 확인을 위해 현재 비밀번호가 필요해요."
+              error={fieldErrors.password}
+            >
               <input
-                id="delete-password"
+                ref={passwordInputRef}
+                name="currentPassword"
                 type="password"
                 autoComplete="current-password"
+                required
                 value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className={inputClass(Boolean(error))}
+                onChange={(event) => {
+                  setPassword(event.target.value);
+                  setFieldErrors((previous) => ({ ...previous, password: undefined }));
+                  setServerError('');
+                }}
+                className={inputClass(Boolean(fieldErrors.password))}
               />
             </Field>
           ) : null}
-          <Field label="확인을 위해 ‘탈퇴합니다’를 입력해 주세요" htmlFor="delete-confirmation">
+          <Field
+            label="확인을 위해 ‘탈퇴합니다’를 입력해 주세요"
+            htmlFor={DELETE_CONFIRMATION_ID}
+            helper="띄어쓰기 없이 정확히 입력해 주세요."
+            error={fieldErrors.confirmation}
+          >
             <input
-              id="delete-confirmation"
+              ref={confirmationInputRef}
+              name="accountDeletionConfirmation"
+              type="text"
+              autoComplete="off"
+              required
               value={confirmation}
-              onChange={(event) => setConfirmation(event.target.value)}
-              className={inputClass(Boolean(error))}
+              onChange={(event) => {
+                setConfirmation(event.target.value);
+                setFieldErrors((previous) => ({ ...previous, confirmation: undefined }));
+                setServerError('');
+              }}
+              className={inputClass(Boolean(fieldErrors.confirmation))}
             />
           </Field>
-          {error ? <p className="m-0 text-13 font-semibold text-red-700 dark:text-red-400" role="alert">{error}</p> : null}
+          {serverError ? (
+            <p
+              id={DELETE_SERVER_ERROR_ID}
+              className="m-0 text-13 font-semibold text-red-700 dark:text-red-400"
+              role="alert"
+            >
+              {serverError}
+            </p>
+          ) : null}
           <button
             type="submit"
-            disabled={(requiresPassword && !password) || confirmation !== '탈퇴합니다' || deleteAccountMutation.isPending}
+            disabled={deleteAccountMutation.isPending}
             className="inline-flex min-h-11 w-full items-center justify-center rounded-btn bg-red-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-600 sm:w-fit"
           >
             {deleteAccountMutation.isPending ? '탈퇴 처리 중...' : '계정 삭제'}
           </button>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

@@ -31,20 +31,15 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<RatingCount> countByRatingForFishId(@Param("fishId") Long fishId);
 
     @Query("""
-            select r.fish.id as fishId, avg(r.rating) as avgRating, count(r) as reviewCount
+            select r.fish.id as fishId,
+                   avg(r.rating) as avgRating,
+                   count(r) as reviewCount,
+                   count(r.rating) as ratingCount
             from Review r
             where r.fish.id in :fishIds
             group by r.fish.id
             """)
     List<FishRatingStat> findRatingStatsByFishIds(@Param("fishIds") Collection<Long> fishIds);
-
-    // 동시 요청 시 lost update가 없도록 DB에서 원자적으로 증가시킨다
-    @Modifying(clearAutomatically = true)
-    @Query("update Review r set r.helpfulCount = r.helpfulCount + 1 where r.id = :reviewId")
-    int incrementHelpfulCount(@Param("reviewId") Long reviewId);
-
-    @Query("select r.helpfulCount from Review r where r.id = :reviewId")
-    Optional<Integer> findHelpfulCountById(@Param("reviewId") Long reviewId);
 
     @Modifying(clearAutomatically = true)
     @Query("update Review r set r.user = null where r.user.id = :userId")

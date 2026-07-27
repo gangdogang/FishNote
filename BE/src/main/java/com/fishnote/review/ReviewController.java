@@ -1,5 +1,7 @@
 package com.fishnote.review;
 
+import com.fishnote.common.ClientIpResolver;
+import com.fishnote.image.ImageUploaderKeyFactory;
 import com.fishnote.review.dto.ReviewDeleteRequest;
 import com.fishnote.review.dto.ReviewHelpfulResponse;
 import com.fishnote.review.dto.ReviewListResponse;
@@ -24,9 +26,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final ClientIpResolver clientIpResolver;
+    private final ImageUploaderKeyFactory imageUploaderKeyFactory;
 
-    public ReviewController(ReviewService reviewService) {
+    public ReviewController(
+            ReviewService reviewService,
+            ClientIpResolver clientIpResolver,
+            ImageUploaderKeyFactory imageUploaderKeyFactory) {
         this.reviewService = reviewService;
+        this.clientIpResolver = clientIpResolver;
+        this.imageUploaderKeyFactory = imageUploaderKeyFactory;
     }
 
     @GetMapping("/fish/{fishId}/reviews")
@@ -44,8 +53,13 @@ public class ReviewController {
     public ReviewResponse create(
             @PathVariable Long fishId,
             @Valid @RequestBody ReviewRequest request,
-            @AuthenticationPrincipal Long userId) {
-        return reviewService.createReview(fishId, request, userId);
+            @AuthenticationPrincipal Long userId,
+            HttpServletRequest httpRequest) {
+        return reviewService.createReview(
+                fishId,
+                request,
+                userId,
+                imageUploaderKey(userId, httpRequest));
     }
 
     @DeleteMapping("/reviews/{reviewId}")
@@ -66,10 +80,12 @@ public class ReviewController {
     }
 
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
+        return clientIpResolver.resolve(request);
+    }
+
+    private String imageUploaderKey(Long userId, HttpServletRequest request) {
+        return userId == null
+                ? imageUploaderKeyFactory.forAnonymous(clientIp(request))
+                : imageUploaderKeyFactory.forUser(userId);
     }
 }

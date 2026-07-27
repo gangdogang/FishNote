@@ -1,7 +1,28 @@
 {
-  "rewrites": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "headers": [
     {
       "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    { "source": "/search", "destination": "/spa-noindex.html" },
+    { "source": "/saved", "destination": "/spa-noindex.html" },
+    { "source": "/login", "destination": "/spa-noindex.html" },
+    { "source": "/signup", "destination": "/spa-noindex.html" },
+    { "source": "/account", "destination": "/spa-noindex.html" },
+    { "source": "/auth/kakao/callback", "destination": "/spa-noindex.html" },
+    {
+      "source": "/((?!_vercel/).*)",
       "destination": "/index.html"
     }
   ]

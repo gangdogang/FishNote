@@ -1,6 +1,7 @@
 package com.fishnote.bookmark;
 
 import com.fishnote.bookmark.dto.BookmarkMergeRequest;
+import com.fishnote.bookmark.dto.BookmarkMergeResponse;
 import com.fishnote.fish.dto.FishSummaryResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -44,8 +45,9 @@ public class BookmarkController {
     }
 
     @PostMapping("/merge")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void merge(@AuthenticationPrincipal Long userId, @Valid @RequestBody BookmarkMergeRequest request) {
-        bookmarkService.mergeBookmarks(userId, request.fishIds());
+    public BookmarkMergeResponse merge(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody BookmarkMergeRequest request) {
+        return bookmarkService.mergeBookmarks(userId, request.fishIds());
     }
 }

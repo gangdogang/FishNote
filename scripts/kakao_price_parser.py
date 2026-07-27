@@ -11,16 +11,27 @@ from __future__ import annotations
 import argparse
 import csv
 import datetime as dt
+import json
+import os
 import re
 import subprocess
 import sys
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
 
 DEFAULT_SOURCE_TYPE = "kakao_openchat"
+ALIAS_MANIFEST_SCHEMA_VERSION = 1
+ALIAS_MANIFEST_SOURCE = "fish_alias"
+DEFAULT_ALIAS_MANIFEST = os.environ.get(
+    "FISHNOTE_ALIAS_MANIFEST_URL",
+    "http://localhost:8080/api/v1/fish/aliases/price-parser",
+)
 DATE_BANNER_RE = re.compile(r"^-+\s*(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일.*-+$")
 BRACKET_MESSAGE_RE = re.compile(r"^\[(?P<speaker>.+?)\]\s*\[(?P<ampm>오전|오후)\s*(?P<hour>\d{1,2}):(?P<minute>\d{2})\]\s*(?P<text>.*)$")
 PC_MESSAGE_RE = re.compile(
@@ -104,17 +115,74 @@ def parse_time(ampm: Optional[str], hour: str, minute: str) -> Tuple[int, int]:
     return h, m
 
 
-def load_aliases(path: Path) -> Dict[str, str]:
+class AliasManifestError(RuntimeError):
+    """Raised when the DB-derived fish-alias manifest cannot be trusted."""
+
+
+def compact_alias(value: str) -> str:
+    return "".join(char for char in value if not char.isspace())
+
+
+def sort_aliases(items: Iterable[Tuple[str, str]]) -> Dict[str, str]:
     aliases: Dict[str, str] = {}
-    with path.open(newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle):
-            canonical = (row.get("canonical_fish_name") or "").strip()
-            alias = (row.get("alias") or row.get("noryangjin_species_name") or "").strip()
-            if canonical:
-                aliases[canonical] = canonical
-            if canonical and alias:
-                aliases[alias] = canonical
-    return dict(sorted(aliases.items(), key=lambda item: len(item[0]), reverse=True))
+    for raw_alias, raw_canonical in items:
+        alias = compact_alias(raw_alias.strip())
+        canonical = raw_canonical.strip()
+        if not alias or not canonical:
+            raise AliasManifestError("Alias manifest contains a blank alias or canonical fish name")
+        previous = aliases.setdefault(alias, canonical)
+        if previous != canonical:
+            raise AliasManifestError(f"Alias {alias!r} maps to more than one canonical fish name")
+
+    if not aliases:
+        raise AliasManifestError("Alias manifest is empty")
+
+    # Shared with ShopPriceParser: compact length descending, then alias/canonical lexical order.
+    return dict(sorted(aliases.items(), key=lambda item: (-len(item[0]), item[0], item[1])))
+
+
+def read_alias_manifest(source: str) -> Mapping[str, Any]:
+    parsed = urlparse(source)
+    try:
+        if parsed.scheme in {"http", "https", "file"}:
+            with urlopen(source, timeout=10) as response:
+                payload = response.read().decode("utf-8")
+        elif parsed.scheme:
+            raise AliasManifestError(f"Unsupported alias manifest URL scheme: {parsed.scheme}")
+        else:
+            payload = Path(source).read_text(encoding="utf-8")
+    except (HTTPError, URLError, OSError, UnicodeDecodeError) as exc:
+        raise AliasManifestError(f"Could not read alias manifest from {source!r}") from exc
+
+    try:
+        document = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise AliasManifestError("Alias manifest is not valid JSON") from exc
+    if not isinstance(document, dict):
+        raise AliasManifestError("Alias manifest root must be a JSON object")
+    return document
+
+
+def load_aliases(source: str) -> Dict[str, str]:
+    document = read_alias_manifest(source)
+    if document.get("schemaVersion") != ALIAS_MANIFEST_SCHEMA_VERSION:
+        raise AliasManifestError("Unsupported alias manifest schemaVersion")
+    if document.get("source") != ALIAS_MANIFEST_SOURCE:
+        raise AliasManifestError("Alias manifest was not derived from fish_alias")
+
+    raw_items = document.get("items")
+    if not isinstance(raw_items, list):
+        raise AliasManifestError("Alias manifest items must be a JSON array")
+    items: List[Tuple[str, str]] = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            raise AliasManifestError("Every alias manifest item must be a JSON object")
+        alias = item.get("alias")
+        canonical = item.get("canonicalFishName")
+        if not isinstance(alias, str) or not isinstance(canonical, str):
+            raise AliasManifestError("Alias manifest item fields must be strings")
+        items.append((alias, canonical))
+    return sort_aliases(items)
 
 
 def read_text(path: Path) -> str:
@@ -289,11 +357,33 @@ def strip_size_parentheses(line: str) -> str:
 
 
 def extract_alias(line: str, aliases: Dict[str, str]) -> Tuple[str, str]:
-    compact = line.replace(" ", "")
+    compact_chars: List[str] = []
+    source_offsets: List[int] = []
+    for source_offset, char in enumerate(line):
+        if not char.isspace():
+            compact_chars.append(char)
+            source_offsets.append(source_offset)
+    compact = "".join(compact_chars)
+
+    best: Optional[Tuple[Tuple[int, int, str, str], str, int]] = None
     for alias, canonical in aliases.items():
-        if alias and alias.replace(" ", "") in compact:
-            return canonical, alias
-    return "", ""
+        compacted_alias = compact_alias(alias)
+        compact_start = compact.find(compacted_alias)
+        if compacted_alias and compact_start >= 0:
+            # Longest alias wins; equal lengths use the earliest occurrence, then lexical order.
+            precedence = (-len(compacted_alias), compact_start, compacted_alias, canonical)
+            candidate = (precedence, canonical, len(compacted_alias))
+            if best is None or candidate[0] < best[0]:
+                best = candidate
+
+    if best is None:
+        return "", ""
+
+    precedence, canonical, alias_length = best
+    compact_start = precedence[1]
+    source_start = source_offsets[compact_start]
+    source_end = source_offsets[compact_start + alias_length - 1] + 1
+    return canonical, line[source_start:source_end]
 
 
 def extract_condition(line: str) -> str:
@@ -461,7 +551,14 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--out", help="Output CSV path. Defaults to data/shop-prices/<input-stem>.csv")
     parser.add_argument("--clipboard", action="store_true", help="Read raw price text from the macOS clipboard.")
     parser.add_argument("--stdin", action="store_true", help="Read raw price text from standard input.")
-    parser.add_argument("--aliases", default="config/price_species_aliases.csv", help="Species alias CSV")
+    parser.add_argument(
+        "--alias-manifest",
+        default=DEFAULT_ALIAS_MANIFEST,
+        help=(
+            "DB-derived fish alias manifest URL or JSON path "
+            f"(default: {DEFAULT_ALIAS_MANIFEST}; override with FISHNOTE_ALIAS_MANIFEST_URL)"
+        ),
+    )
     parser.add_argument("--fallback-date", default=dt.date.today().isoformat(), help="Date for exports that only contain times")
     parser.add_argument("--source-name", default="노량진 오픈채팅", help="Human-readable source name")
     parser.add_argument("--source-type", default=DEFAULT_SOURCE_TYPE, help="Source type stored in CSV")
@@ -488,7 +585,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default_stem = input_path.stem
 
     out_path = Path(args.out) if args.out else Path("data") / "shop-prices" / f"{default_stem}.csv"
-    aliases = load_aliases(Path(args.aliases))
+    aliases = load_aliases(args.alias_manifest)
     messages = parse_messages(raw_text, args.fallback_date)
     rows = parse_prices(messages, aliases, args.source_type, args.source_name, args.start_hour, args.end_hour)
     write_csv(out_path, rows)

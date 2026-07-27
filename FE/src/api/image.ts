@@ -2,6 +2,8 @@ import { apiClient } from './client';
 
 interface ImageUploadResponse {
   url: string;
+  assetId: string;
+  expiresAt: string;
 }
 
 export async function uploadImage(file: File) {

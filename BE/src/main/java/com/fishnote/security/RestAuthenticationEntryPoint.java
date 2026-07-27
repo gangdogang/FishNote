@@ -1,12 +1,14 @@
 package com.fishnote.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fishnote.common.ErrorResponse;
+import com.fishnote.common.CodedErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -26,11 +28,15 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
             throws IOException {
         HttpStatus status = HttpStatus.UNAUTHORIZED;
-        ErrorResponse body = new ErrorResponse(
+        Object requestTraceId = request.getAttribute("traceId");
+        CodedErrorResponse body = new CodedErrorResponse(
                 OffsetDateTime.now(),
                 status.value(),
                 status.getReasonPhrase(),
+                "UNAUTHORIZED",
                 "인증이 필요합니다.",
+                Map.of(),
+                requestTraceId == null ? UUID.randomUUID().toString() : requestTraceId.toString(),
                 request.getRequestURI());
 
         response.setStatus(status.value());

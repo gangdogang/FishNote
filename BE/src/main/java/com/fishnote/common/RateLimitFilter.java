@@ -1,53 +1,174 @@
 package com.fishnote.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Ticker;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * IP 기반 고정 윈도(fixed-window) 레이트 리미터.
- * 익명 허용 엔드포인트(후기 작성/삭제/도움돼요/이미지 업로드/로그인)의
- * 스팸·브루트포스·비용 남용을 막는다. 단일 인스턴스 배포(Render 1 dyno) 전제의
- * 인메모리 구현으로, 다중 인스턴스로 확장 시 Redis 등 외부 저장소로 교체할 것.
+ * Bounded fixed-window protection for public write and authentication endpoints.
+ *
+ * <p>Per-user/IP counters and endpoint-global counters are stored separately so actor-key
+ * churn cannot evict the global protection. This remains a single-instance limiter; a future
+ * multi-instance deployment must move the counter store to Redis/Bucket4j.</p>
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final Duration WINDOW = Duration.ofMinutes(10);
-    private static final int MAX_TRACKED_KEYS = 10_000;
+    static final String ERROR_CODE = "RATE_LIMITED";
+    public static final String RESET_HEADER = "X-RateLimit-Reset";
 
-    private record Rule(String method, Pattern path, int limit, String bucket) {
+    private record Rule(String method, Pattern path, int actorLimit, String bucket) {
     }
 
     private static final List<Rule> RULES = List.of(
-            new Rule("POST", Pattern.compile("/api/v1/fish/\\d+/reviews"), 10, "review-write"),
-            new Rule("DELETE", Pattern.compile("/api/v1/reviews/\\d+"), 10, "review-delete"),
-            new Rule("POST", Pattern.compile("/api/v1/reviews/\\d+/helpful"), 60, "helpful"),
+            new Rule("POST", Pattern.compile("/api/v1/fish/[^/]+/reviews"), 10, "review-write"),
+            new Rule("POST", Pattern.compile("/api/v1/fish/[^/]+/corrections"), 5, "correction-write"),
+            new Rule("DELETE", Pattern.compile("/api/v1/reviews/[^/]+"), 10, "review-delete"),
+            new Rule("POST", Pattern.compile("/api/v1/reviews/[^/]+/helpful"), 60, "helpful"),
             new Rule("POST", Pattern.compile("/api/v1/images"), 20, "image-upload"),
             new Rule("POST", Pattern.compile("/api/v1/auth/(login|signup|kakao)"), 20, "auth"));
 
     private final boolean enabled;
     private final ObjectMapper objectMapper;
-    private final ConcurrentHashMap<String, Integer> counters = new ConcurrentHashMap<>();
+    private final ClientIpResolver clientIpResolver;
+    private final Duration window;
+    private final int globalMultiplier;
+    private final int imageGlobalLimit;
+    private final int correctionGlobalLimit;
+    private final Clock clock;
+    private final Cache<String, AtomicInteger> actorCounters;
+    private final Cache<String, AtomicInteger> globalCounters;
 
+    @Autowired
     public RateLimitFilter(
             @Value("${app.rate-limit.enabled:true}") boolean enabled,
-            ObjectMapper objectMapper) {
+            @Value("${app.rate-limit.window-seconds:600}") long windowSeconds,
+            @Value("${app.rate-limit.max-tracked-actors:10000}") long maxTrackedActors,
+            @Value("${app.rate-limit.global-multiplier:100}") int globalMultiplier,
+            @Value("${app.rate-limit.image-global-limit:40}") int imageGlobalLimit,
+            @Value("${app.rate-limit.correction-global-limit:100}") int correctionGlobalLimit,
+            ObjectMapper objectMapper,
+            ClientIpResolver clientIpResolver) {
+        this(
+                enabled,
+                objectMapper,
+                clientIpResolver,
+                Duration.ofSeconds(windowSeconds),
+                maxTrackedActors,
+                globalMultiplier,
+                imageGlobalLimit,
+                correctionGlobalLimit,
+                Clock.systemUTC(),
+                Ticker.systemTicker());
+    }
+
+    RateLimitFilter(
+            boolean enabled,
+            ObjectMapper objectMapper,
+            ClientIpResolver clientIpResolver,
+            Duration window,
+            long maxTrackedActors,
+            int globalMultiplier,
+            Clock clock,
+            Ticker ticker) {
+        this(
+                enabled,
+                objectMapper,
+                clientIpResolver,
+                window,
+                maxTrackedActors,
+                globalMultiplier,
+                Integer.MAX_VALUE,
+                Integer.MAX_VALUE,
+                clock,
+                ticker);
+    }
+
+    RateLimitFilter(
+            boolean enabled,
+            ObjectMapper objectMapper,
+            ClientIpResolver clientIpResolver,
+            Duration window,
+            long maxTrackedActors,
+            int globalMultiplier,
+            int imageGlobalLimit,
+            Clock clock,
+            Ticker ticker) {
+        this(
+                enabled,
+                objectMapper,
+                clientIpResolver,
+                window,
+                maxTrackedActors,
+                globalMultiplier,
+                imageGlobalLimit,
+                Integer.MAX_VALUE,
+                clock,
+                ticker);
+    }
+
+    RateLimitFilter(
+            boolean enabled,
+            ObjectMapper objectMapper,
+            ClientIpResolver clientIpResolver,
+            Duration window,
+            long maxTrackedActors,
+            int globalMultiplier,
+            int imageGlobalLimit,
+            int correctionGlobalLimit,
+            Clock clock,
+            Ticker ticker) {
+        if (window.compareTo(Duration.ofSeconds(1)) < 0) {
+            throw new IllegalArgumentException("rate-limit window는 1초 이상이어야 합니다.");
+        }
+        if (maxTrackedActors <= 0
+                || globalMultiplier <= 0
+                || imageGlobalLimit <= 0
+                || correctionGlobalLimit <= 0) {
+            throw new IllegalArgumentException("rate-limit cache 크기와 global limit은 양수여야 합니다.");
+        }
         this.enabled = enabled;
         this.objectMapper = objectMapper;
+        this.clientIpResolver = clientIpResolver;
+        this.window = window;
+        this.globalMultiplier = globalMultiplier;
+        this.imageGlobalLimit = imageGlobalLimit;
+        this.correctionGlobalLimit = correctionGlobalLimit;
+        this.clock = clock;
+        Duration cacheTtl = window.plusSeconds(1);
+        this.actorCounters = Caffeine.newBuilder()
+                .maximumSize(maxTrackedActors)
+                .expireAfterWrite(cacheTtl)
+                .ticker(ticker)
+                .build();
+        this.globalCounters = Caffeine.newBuilder()
+                .maximumSize(RULES.size() * 2L)
+                .expireAfterWrite(cacheTtl)
+                .ticker(ticker)
+                .build();
     }
 
     @Override
@@ -66,13 +187,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        long windowStartMs = System.currentTimeMillis() / WINDOW.toMillis() * WINDOW.toMillis();
-        String key = matched.bucket() + "|" + clientIp(request) + "|" + windowStartMs;
-        int count = counters.merge(key, 1, Integer::sum);
-        purgeExpiredIfNeeded(windowStartMs);
+        long nowEpochSecond = clock.instant().getEpochSecond();
+        long windowSeconds = window.toSeconds();
+        long windowStart = Math.floorDiv(nowEpochSecond, windowSeconds) * windowSeconds;
+        long resetEpochSecond = Math.addExact(windowStart, windowSeconds);
+        String actorKey = matched.bucket() + '|' + actorIdentity(request) + '|' + windowStart;
+        String globalKey = matched.bucket() + '|' + windowStart;
 
-        if (count > matched.limit()) {
-            reject(request, response);
+        int actorCount = increment(actorCounters, actorKey);
+        if (actorCount > matched.actorLimit()) {
+            reject(request, response, nowEpochSecond, resetEpochSecond);
+            return;
+        }
+
+        // Requests already rejected by an actor bucket must not let one caller poison the
+        // endpoint-global budget for everyone else.
+        int globalCount = increment(globalCounters, globalKey);
+        if (globalCount > globalLimit(matched)) {
+            reject(request, response, nowEpochSecond, resetEpochSecond);
             return;
         }
         filterChain.doFilter(request, response);
@@ -88,38 +220,71 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return null;
     }
 
-    private String clientIp(HttpServletRequest request) {
-        // Render 등 프록시 뒤에서는 원 IP가 X-Forwarded-For 첫 항목에 담긴다
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded)) {
-            return forwarded.split(",")[0].trim();
+    private String actorIdentity(HttpServletRequest request) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getPrincipal() instanceof Long userId) {
+            return "user:" + userId;
         }
-        return request.getRemoteAddr();
+        return "ip:" + clientIpResolver.resolve(request);
     }
 
-    private void purgeExpiredIfNeeded(long currentWindowStartMs) {
-        if (counters.size() <= MAX_TRACKED_KEYS) {
-            return;
-        }
-        counters.keySet().removeIf(key -> {
-            int idx = key.lastIndexOf('|');
-            try {
-                return Long.parseLong(key.substring(idx + 1)) < currentWindowStartMs;
-            } catch (NumberFormatException ex) {
-                return true;
-            }
-        });
+    private int globalLimit(Rule rule) {
+        int multipliedLimit = (int) Math.min(
+                Integer.MAX_VALUE, (long) rule.actorLimit() * globalMultiplier);
+        return switch (rule.bucket()) {
+            case "image-upload" -> Math.min(multipliedLimit, imageGlobalLimit);
+            case "correction-write" -> Math.min(multipliedLimit, correctionGlobalLimit);
+            default -> multipliedLimit;
+        };
     }
 
-    private void reject(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private int increment(Cache<String, AtomicInteger> cache, String key) {
+        AtomicInteger counter = cache.get(key, ignored -> new AtomicInteger());
+        return counter.updateAndGet(current -> current == Integer.MAX_VALUE ? current : current + 1);
+    }
+
+    private void reject(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            long nowEpochSecond,
+            long resetEpochSecond) throws IOException {
+        long retryAfterSeconds = Math.max(1, resetEpochSecond - nowEpochSecond);
+        OffsetDateTime now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        OffsetDateTime resetAt = OffsetDateTime.ofInstant(
+                Instant.ofEpochSecond(resetEpochSecond),
+                ZoneOffset.UTC);
+
         response.setStatus(429);
+        response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(retryAfterSeconds));
+        response.setHeader(RESET_HEADER, Long.toString(resetEpochSecond));
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        objectMapper.writeValue(response.getWriter(), new ErrorResponse(
-                OffsetDateTime.now(),
+        objectMapper.writeValue(response.getWriter(), new RateLimitErrorResponse(
+                now,
                 429,
                 "Too Many Requests",
+                ERROR_CODE,
                 "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
-                request.getRequestURI()));
+                Map.of(),
+                traceId(request),
+                request.getRequestURI(),
+                resetAt));
+    }
+
+    private String traceId(HttpServletRequest request) {
+        Object existing = request.getAttribute("traceId");
+        return existing == null ? java.util.UUID.randomUUID().toString() : existing.toString();
+    }
+
+    long trackedActorCount() {
+        actorCounters.cleanUp();
+        return actorCounters.estimatedSize();
+    }
+
+    long trackedGlobalCount() {
+        globalCounters.cleanUp();
+        return globalCounters.estimatedSize();
     }
 }

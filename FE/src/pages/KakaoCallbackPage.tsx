@@ -7,7 +7,7 @@ import { consumeKakaoOAuthAttempt, getKakaoCallbackUri } from '../lib/kakaoOAuth
 import { usePageMeta } from '../hooks/usePageMeta';
 
 export default function KakaoCallbackPage() {
-  usePageMeta('카카오 로그인');
+  usePageMeta('카카오 로그인', undefined, null, { noindex: true });
   const navigate = useNavigate();
   const { loginWithKakao } = useAuth();
   const startedRef = useRef(false);
@@ -46,10 +46,10 @@ export default function KakaoCallbackPage() {
   }, [loginWithKakao, navigate]);
 
   return (
-    <main className="mx-auto flex max-w-content justify-center px-4 pb-20 pt-12 sm:px-7 sm:pt-16">
+    <div className="mx-auto flex max-w-content justify-center px-4 pb-20 pt-12 sm:px-7 sm:pt-16">
       <section className="w-full max-w-[400px] rounded-card border border-line bg-surface px-5 py-7 text-center sm:px-6">
-        <div className="mb-5 flex items-center justify-center gap-2 text-ink" aria-label="FishNote">
-          <Fish className="h-4 w-[26px] flex-none text-sea" aria-hidden />
+        <div className="mb-5 flex items-center justify-center gap-2 text-ink">
+          <Fish className="h-4 w-[26px] flex-none text-accent" aria-hidden />
           <span className="text-17 font-extrabold leading-none">FishNote</span>
         </div>
         {error ? (
@@ -60,7 +60,7 @@ export default function KakaoCallbackPage() {
               to="/login"
               replace
               state={retryRedirectPath === '/' ? undefined : { from: retryRedirectPath }}
-              className="inline-flex min-h-11 items-center justify-center rounded-btn bg-sea px-5 py-2.5 text-sm font-bold text-white no-underline transition hover:bg-sea-deep"
+              className="inline-flex min-h-11 items-center justify-center rounded-btn bg-primary px-5 py-2.5 text-body-sm font-bold text-on-primary no-underline transition hover:bg-primary-hover"
             >
               로그인으로 돌아가기
             </Link>
@@ -72,6 +72,6 @@ export default function KakaoCallbackPage() {
           </>
         )}
       </section>
-    </main>
+    </div>
   );
 }

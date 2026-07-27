@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fishnote.review.Review;
 import com.fishnote.review.ReviewRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,10 +45,15 @@ class FishControllerTest {
         reviewRepository.deleteAll();
         fishRepository.deleteAll();
         Fish flounder = fish("광어", false, (short) 2, Set.of((short) 12, (short) 1), Set.of("담백", "쫄깃"));
+        flounder.addAlias("광어", FishAliasType.STANDARD);
+        flounder.addAlias("넙치", FishAliasType.MARKET);
         flounder.getImages().addAll(List.of("광어 갤러리 1", "광어 갤러리 2", "광어 갤러리 3"));
         flounder.getTips().addAll(List.of("첫 번째 팁", "두 번째 팁"));
         Fish yellowtail = fish("방어", true, (short) 3, Set.of((short) 12, (short) 1), Set.of("고소", "기름진"));
         Fish seabream = fish("참돔", true, (short) 3, Set.of((short) 4, (short) 5), Set.of("담백", "고급"));
+        yellowtail.addAlias("방어", FishAliasType.STANDARD);
+        seabream.addAlias("참돔", FishAliasType.STANDARD);
+        seabream.addAlias("도미", FishAliasType.MARKET);
         flounder.getSimilarFishes().addAll(Set.of(yellowtail, seabream));
         fishRepository.save(yellowtail);
         fishRepository.save(seabream);
@@ -187,9 +193,122 @@ class FishControllerTest {
                 .andExpect(jsonPath("$.similarFishes[1].seasonMonths", containsInAnyOrder(4, 5)));
     }
 
+    @Test
+    void aliasSearchFindsTheCanonicalCatalogEntry() throws Exception {
+        Fish pikeConger = aliasFish("갯장어", "gaetjangeo", "하모");
+        Fish conger = aliasFish("붕장어", "bungjangeo", "아나고");
+        Fish redMullet = aliasFish("가숭어", "gasungeo", "밀치");
+        fishRepository.saveAll(List.of(pikeConger, conger, redMullet));
+
+        for (Map.Entry<String, String> expected : Map.of(
+                        "넙치", "광어",
+                        "도미", "참돔",
+                        "하모", "갯장어",
+                        "아나고", "붕장어",
+                        "밀치", "가숭어")
+                .entrySet()) {
+            mockMvc.perform(get("/api/v1/fish")
+                            .param("search", expected.getKey())
+                            .param("sort", "name"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()", is(1)))
+                    .andExpect(jsonPath("$[0].name", is(expected.getValue())))
+                    .andExpect(jsonPath("$[0].category", is("FISH")));
+        }
+    }
+
+    @Test
+    void suggestionsExposeMatchedAliasAndCanonicalName() throws Exception {
+        mockMvc.perform(get("/api/v1/fish/suggestions")
+                        .param("q", "도미")
+                        .param("limit", "8"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()", is(1)))
+                .andExpect(jsonPath("$.items[0].name", is("참돔")))
+                .andExpect(jsonPath("$.items[0].slug", is("chamdom")))
+                .andExpect(jsonPath("$.items[0].matchedAlias", is("도미")));
+    }
+
+    @Test
+    void priceAliasManifestIsDbDerivedAndDeterministicallyOrdered() throws Exception {
+        mockMvc.perform(get("/api/v1/fish/aliases/price-parser"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.schemaVersion", is(1)))
+                .andExpect(jsonPath("$.source", is("fish_alias")))
+                .andExpect(jsonPath("$.items.length()", is(5)))
+                .andExpect(jsonPath("$.items[0].alias", is("광어")))
+                .andExpect(jsonPath("$.items[0].canonicalFishName", is("광어")))
+                .andExpect(jsonPath("$.items[1].alias", is("넙치")))
+                .andExpect(jsonPath("$.items[1].canonicalFishName", is("광어")))
+                .andExpect(jsonPath("$.items[2].alias", is("도미")))
+                .andExpect(jsonPath("$.items[2].canonicalFishName", is("참돔")))
+                .andExpect(jsonPath("$.items[3].alias", is("방어")))
+                .andExpect(jsonPath("$.items[4].alias", is("참돔")));
+    }
+
+    @Test
+    void suggestionsRequireTwoCharactersAndBoundedLimit() throws Exception {
+        mockMvc.perform(get("/api/v1/fish/suggestions").param("q", "돔"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(get("/api/v1/fish/suggestions")
+                        .param("q", "도미")
+                        .param("limit", "21"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void suggestionsReturnStandardBadRequestForInvalidParameters() throws Exception {
+        mockMvc.perform(get("/api/v1/fish/suggestions"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", is("필수 요청 값이 누락되었습니다.")))
+                .andExpect(jsonPath("$.path", is("/api/v1/fish/suggestions")));
+
+        mockMvc.perform(get("/api/v1/fish/suggestions").param("q", ""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", is("검색어는 2~80자여야 합니다.")))
+                .andExpect(jsonPath("$.path", is("/api/v1/fish/suggestions")));
+
+        mockMvc.perform(get("/api/v1/fish/suggestions")
+                        .param("q", "도미")
+                        .param("limit", "not-a-number"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status", is(400)))
+                .andExpect(jsonPath("$.error", is("Bad Request")))
+                .andExpect(jsonPath("$.message", is("경로 또는 쿼리 값이 올바르지 않습니다.")))
+                .andExpect(jsonPath("$.path", is("/api/v1/fish/suggestions")));
+    }
+
+    @Test
+    void numericIdAndSlugReturnTheSameDetailAndAliases() throws Exception {
+        Fish flounder = fishRepository.findByName("광어").orElseThrow();
+
+        mockMvc.perform(get("/api/v1/fish/{identifier}", flounder.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(flounder.getId().intValue())))
+                .andExpect(jsonPath("$.slug", is("gwangeo")))
+                .andExpect(jsonPath("$.aliases", containsInAnyOrder("넙치")));
+
+        mockMvc.perform(get("/api/v1/fish/{identifier}", "gwangeo"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(flounder.getId().intValue())))
+                .andExpect(jsonPath("$.slug", is("gwangeo")))
+                .andExpect(jsonPath("$.name", is("광어")));
+    }
+
     private Fish fish(String name, boolean featured, Short priceLevel, Set<Short> seasonMonths, Set<String> tasteTags) {
         Fish fish = new Fish();
         fish.setName(name);
+        fish.setSlug(switch (name) {
+            case "광어" -> "gwangeo";
+            case "방어" -> "bangeo";
+            case "참돔" -> "chamdom";
+            default -> "test-" + name;
+        });
         fish.setNameEn(name);
         fish.setImageUrl(name + " 대표 이미지");
         fish.setDescription(name + " 설명");
@@ -197,6 +316,14 @@ class FishControllerTest {
         fish.setFeatured(featured);
         fish.getSeasonMonths().addAll(seasonMonths);
         fish.getTasteTags().addAll(tasteTags);
+        return fish;
+    }
+
+    private Fish aliasFish(String name, String slug, String alias) {
+        Fish fish = fish(name, false, (short) 2, Set.of(), Set.of());
+        fish.setSlug(slug);
+        fish.addAlias(name, FishAliasType.STANDARD);
+        fish.addAlias(alias, FishAliasType.MARKET);
         return fish;
     }
 

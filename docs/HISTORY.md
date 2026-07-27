@@ -100,6 +100,66 @@ f4f398a perf 상세·후기 쿼리 감축            f7e7766 keep-warm 도메인
 - 후기 사진: 업로드 시 자동 축소(w_1600) + 표시 시 최적화 변환(f_auto,q_auto,w_800) + 전체 이미지 lazy loading — 원본 5MB 서빙 구조 제거
 - 참고: GitHub 저장소명이 FishBook → **FishNote**로 변경됨
 
+### 9. 제품 품질 개선 Phase 5 (07-22~07-23)
+
+`docs/13_제품품질_개선_구현설계.md`를 기준으로 기존 디자인 언어와 `/api/v1` 호환성을
+유지하면서 FE 접근성·데이터 신뢰·read/write 경로·운영 안전장치를 확장했다.
+
+FE:
+
+- FishCard의 Link/button 중첩을 제거하고 SmartImage·broken-image fallback·실제 metadata 기반 alt 적용
+- 모바일 filter sheet, 상세 정보 우선 순서, 반응형 가격 chart+table, price/review/source 부분 오류 분리
+- dialog focus trap/restore, route focus/announce, form label/error, safe-area·dark 대비 회귀 추가
+- 홈을 `GET /api/v1/home` 한 요청으로 통합하고 측정 전 “인기/에디터 추천” 카피를 규칙형으로 교체
+- typed Analytics event와 PII/URL 방지 wrapper 추가
+- seed/manifest 기반 공개 26종 catalog를 build에서 검증하고 slug 상세 26개·홈 ItemList·sitemap·
+  private noindex shell을 prerender
+
+BE/API:
+
+- `/api/v2/fish` cursor/facets/alias 검색, v2 cursor 후기, ID/slug 상세 projection과 `ratingCount`
+- claim별 출처·검증 상태·오류 제보, 26종 media metadata와 PHOTO 출처
+- helpful CTE, bookmark PUT/merge, Kakao 최초 연결을 PostgreSQL 원자/동시성 경로로 변경
+- 시세 parse/transaction 분리, 최대 200행 multi-values insert, SHA-256 hash dedup,
+  raw text 없는 가격 projection, commit 후 touched-Fish cache eviction/Telegram reply
+- bounded Caffeine, public Cache-Control/ETag, private no-store, DB readiness와 bounded-tag metric/trace 추가
+- Cloudinary upload/destroy duration·timeout을 bounded provider/operation tag로 계측하고 URL secret·SDK cause 로그를 제거
+- 암호화 backup·freshness·격리 restore drill 스크립트와 [`OPERATIONS.md`](OPERATIONS.md) 작성
+
+Flyway 기록:
+
+| 버전 | 내용 |
+|---|---|
+| V8 | 후기 이미지 자산 lifecycle |
+| V9 | cleanup claim/retry fencing |
+| V10 | slug/category/scientific name, alias, pg_trgm |
+| V11 | source/correction + 검증 SEASON 6건 |
+| V12 | fish image metadata expand |
+| V13 | reviewed PRIMARY/PHOTO 26/26 seed |
+| V14 | fish review stat read model·cursor index |
+| V15 | nullable price `dedup_hash` + compatibility trigger(expand) |
+| V16 | duplicate audit, hash backfill·NOT NULL·unique(enforce) |
+| V17 | 양수 가격·range·confidence CHECK |
+| V18 | legacy raw-text unique 제거(contract) |
+
+V18은 즉시 적용 대상으로 기록하지 않는다. V16/V17 안정화 릴리스는
+`SPRING_FLYWAY_TARGET=17`을 사용하고, 운영 snapshot dry-run·백업/복구·구 버전 rollback 불필요를
+확인한 뒤 target 제한을 제거한다.
+
+검증 기록:
+
+- FE Chromium/WebKit × light/dark resilience matrix: 12/12 실행 완료
+- H2 public cache/readiness 계약: 2건 실행 완료
+- lint: error 0, 기존 `Toast.tsx` fast-refresh warning 1 유지
+- PostgreSQL 대형 fixture/query budget, 100행 import 3 statement 이하, helpful/bookmark/OAuth/merge
+  동시성, review stat consistency Testcontainers는 구현·컴파일됨
+- 문서 동기화 시점의 로컬 환경에는 Docker가 없어 PostgreSQL Testcontainers runtime은 미실행
+- staging migration dry-run, 실제 운영 backup/restore record, Vercel Insights/OG 200,
+  warm p95·Web Vitals는 미검증
+
+이 Phase 5에는 새 성능 전/후 수치를 기록하지 않는다. 위 §4의 3.8초→0.4초는 07-10 당시의
+역사적 측정이며 현재 endpoint·fixture의 성능 근거로 재사용하지 않는다.
+
 ## 교훈 모음
 
 1. **삭제는 항상 마지막** — 새로 만들고, 확인하고, 그다음 지운다

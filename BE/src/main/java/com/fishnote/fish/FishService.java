@@ -1,12 +1,18 @@
 package com.fishnote.fish;
 
 import com.fishnote.common.NotFoundException;
+import com.fishnote.fish.dto.FishAliasManifestItemResponse;
+import com.fishnote.fish.dto.FishAliasManifestResponse;
 import com.fishnote.fish.dto.FishDetailResponse;
+import com.fishnote.fish.dto.FishFocalPointResponse;
+import com.fishnote.fish.dto.FishMediaResponse;
 import com.fishnote.fish.dto.FishSummaryResponse;
-import com.fishnote.fish.dto.SimilarFishResponse;
+import com.fishnote.fish.dto.FishSuggestionCandidate;
+import com.fishnote.fish.dto.FishSuggestionItemResponse;
+import com.fishnote.fish.dto.FishSuggestionsResponse;
 import com.fishnote.review.FishRatingStat;
-import com.fishnote.review.ReviewRepository;
-import com.fishnote.review.RatingDistribution;
+import com.fishnote.review.FishRatingStatReader;
+import com.fishnote.fish.query.FishDetailQueryRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -17,6 +23,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,17 +32,27 @@ import org.springframework.util.StringUtils;
 @Transactional(readOnly = true)
 public class FishService {
 
+    private static final int ALIAS_MANIFEST_SCHEMA_VERSION = 1;
+    private static final String ALIAS_MANIFEST_SOURCE = "fish_alias";
     private static final Set<Short> SPRING = Set.of((short) 3, (short) 4, (short) 5);
     private static final Set<Short> SUMMER = Set.of((short) 6, (short) 7, (short) 8);
     private static final Set<Short> FALL = Set.of((short) 9, (short) 10, (short) 11);
     private static final Set<Short> WINTER = Set.of((short) 12, (short) 1, (short) 2);
 
     private final FishRepository fishRepository;
-    private final ReviewRepository reviewRepository;
+    private final FishAliasRepository fishAliasRepository;
+    private final FishRatingStatReader ratingStatReader;
+    private final FishDetailQueryRepository detailQueryRepository;
 
-    public FishService(FishRepository fishRepository, ReviewRepository reviewRepository) {
+    public FishService(
+            FishRepository fishRepository,
+            FishAliasRepository fishAliasRepository,
+            FishRatingStatReader ratingStatReader,
+            FishDetailQueryRepository detailQueryRepository) {
         this.fishRepository = fishRepository;
-        this.reviewRepository = reviewRepository;
+        this.fishAliasRepository = fishAliasRepository;
+        this.ratingStatReader = ratingStatReader;
+        this.detailQueryRepository = detailQueryRepository;
     }
 
     public List<FishSummaryResponse> findFishes(
@@ -86,10 +103,51 @@ public class FishService {
                 .toList();
     }
 
-    public FishDetailResponse getFish(Long id) {
-        Fish fish = fishRepository.findDetailById(id)
-                .orElseThrow(() -> new NotFoundException("생선을 찾을 수 없습니다."));
-        return toDetail(fish);
+    public FishDetailResponse getFish(String identifier) {
+        return detailQueryRepository.findDetail(identifier)
+                .orElseThrow(() -> new NotFoundException("횟감을 찾을 수 없습니다."));
+    }
+
+    public FishSuggestionsResponse suggestFishes(String query, int limit) {
+        String normalized = normalizeSuggestionQuery(query);
+        if (limit < 1 || limit > 20) {
+            throw new IllegalArgumentException("limit은 1~20 사이여야 합니다.");
+        }
+
+        String escaped = escapeLike(normalized);
+        List<FishSuggestionCandidate> candidates = fishAliasRepository.findSuggestionCandidates(
+                normalized,
+                "%" + escaped + "%",
+                escaped + "%",
+                PageRequest.of(0, limit));
+        return new FishSuggestionsResponse(candidates.stream()
+                .map(candidate -> new FishSuggestionItemResponse(
+                        candidate.getId(),
+                        candidate.getSlug(),
+                        candidate.getName(),
+                        candidate.getName().equals(candidate.getMatchedAlias())
+                                ? null
+                                : candidate.getMatchedAlias(),
+                        candidate.getThumbnail()))
+                .toList());
+    }
+
+    public FishAliasManifestResponse getPriceAliasManifest() {
+        List<FishAliasManifestItemResponse> items = fishAliasRepository.findAllWithFish().stream()
+                .map(alias -> new FishAliasManifestItemResponse(
+                        alias.getAlias(),
+                        alias.getFish().getName()))
+                .sorted(Comparator
+                        .comparingInt((FishAliasManifestItemResponse item) ->
+                                item.alias().codePointCount(0, item.alias().length()))
+                        .reversed()
+                        .thenComparing(FishAliasManifestItemResponse::alias)
+                        .thenComparing(FishAliasManifestItemResponse::canonicalFishName))
+                .toList();
+        return new FishAliasManifestResponse(
+                ALIAS_MANIFEST_SCHEMA_VERSION,
+                ALIAS_MANIFEST_SOURCE,
+                items);
     }
 
     public List<FishSummaryResponse> summarizeFishes(List<Fish> fishes) {
@@ -121,7 +179,10 @@ public class FishService {
     private FishSummaryResponse toSummary(Fish fish, FishRatingStat stat) {
         return new FishSummaryResponse(
                 fish.getId(),
+                fish.getSlug(),
+                fish.getCategory(),
                 fish.getName(),
+                primaryMedia(fish),
                 fish.getImageUrl(),
                 fish.getDescription(),
                 fish.getPriceLevel(),
@@ -129,58 +190,45 @@ public class FishService {
                 fish.getSeasonMonths().stream().sorted().toList(),
                 fish.isFeatured(),
                 averageRating(stat),
-                reviewCount(stat));
+                reviewCount(stat),
+                ratingCount(stat));
     }
 
-    private FishDetailResponse toDetail(Fish fish) {
-        List<Long> statIds = new ArrayList<>();
-        statIds.add(fish.getId());
-        fish.getSimilarFishes().forEach(similar -> statIds.add(similar.getId()));
-        Map<Long, FishRatingStat> stats = ratingStats(statIds);
-
-        return new FishDetailResponse(
-                fish.getId(),
-                fish.getName(),
-                fish.getNameEn(),
-                fish.getImageUrl(),
-                detailImages(fish),
-                fish.getDescription(),
-                fish.getTasteDesc(),
-                fish.getTasteTags().stream().sorted().toList(),
-                fish.getSeasonMonths().stream().sorted().toList(),
-                fish.getPriceLevel(),
-                averageRating(stats.get(fish.getId())),
-                reviewCount(stats.get(fish.getId())),
-                RatingDistribution.from(reviewRepository.countByRatingForFishId(fish.getId())),
-                List.copyOf(fish.getTips()),
-                fish.getSimilarFishes().stream()
-                        .map(similar -> toSimilar(similar, stats.get(similar.getId())))
-                        .sorted(Comparator.comparing(SimilarFishResponse::name))
-                        .toList());
+    private FishMediaResponse primaryMedia(Fish fish) {
+        return fish.getImageMedia().stream()
+                .filter(image -> image.getRole() == FishImageRole.PRIMARY)
+                .filter(FishImage::hasResponsiveMetadata)
+                .sorted(Comparator.comparingInt(FishImage::getImageOrder))
+                .findFirst()
+                .map(this::toMedia)
+                .orElse(null);
     }
 
-    private SimilarFishResponse toSimilar(Fish fish, FishRatingStat stat) {
-        return new SimilarFishResponse(
-                fish.getId(),
-                fish.getName(),
-                fish.getImageUrl(),
-                fish.getPriceLevel(),
-                averageRating(stat),
-                fish.getSeasonMonths().stream().sorted().toList());
-    }
-
-    private List<String> detailImages(Fish fish) {
-        if (!fish.getImages().isEmpty()) {
-            return List.copyOf(fish.getImages());
-        }
-        return StringUtils.hasText(fish.getImageUrl()) ? List.of(fish.getImageUrl()) : List.of();
+    private FishMediaResponse toMedia(FishImage image) {
+        FishFocalPointResponse focalPoint = image.getFocalX() == null || image.getFocalY() == null
+                ? null
+                : new FishFocalPointResponse(
+                        image.getFocalX().doubleValue(),
+                        image.getFocalY().doubleValue());
+        return new FishMediaResponse(
+                image.getId().toString(),
+                image.getUrl(),
+                image.getWidth(),
+                image.getHeight(),
+                image.getAlt(),
+                image.getRole(),
+                image.getCredit(),
+                image.getSourceUrl(),
+                image.getLicense(),
+                focalPoint,
+                image.getBlurDataUrl());
     }
 
     private Map<Long, FishRatingStat> ratingStats(Collection<Long> fishIds) {
         if (fishIds.isEmpty()) {
             return Map.of();
         }
-        return reviewRepository.findRatingStatsByFishIds(fishIds).stream()
+        return ratingStatReader.findByFishIds(fishIds).stream()
                 .collect(Collectors.toMap(FishRatingStat::getFishId, Function.identity()));
     }
 
@@ -193,5 +241,27 @@ public class FishService {
 
     private long reviewCount(FishRatingStat stat) {
         return stat == null ? 0 : stat.getReviewCount();
+    }
+
+    private long ratingCount(FishRatingStat stat) {
+        return stat == null ? 0 : stat.getRatingCount();
+    }
+
+    private String normalizeSuggestionQuery(String query) {
+        String normalized = query == null
+                ? ""
+                : query.trim().replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        int length = normalized.codePointCount(0, normalized.length());
+        if (length < 2 || length > 80) {
+            throw new IllegalArgumentException("검색어는 2~80자여야 합니다.");
+        }
+        return normalized;
+    }
+
+    private String escapeLike(String keyword) {
+        return keyword
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

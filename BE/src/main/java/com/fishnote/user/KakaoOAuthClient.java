@@ -2,6 +2,7 @@ package com.fishnote.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fishnote.observability.ExternalApiMetrics;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +16,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 @Component
@@ -27,18 +29,29 @@ public class KakaoOAuthClient {
     private final String clientId;
     private final String clientSecret;
     private final RestClient restClient;
+    private final ExternalApiMetrics externalApiMetrics;
 
     @Autowired
     public KakaoOAuthClient(
             @Value("${app.kakao.oauth.client-id:}") String clientId,
-            @Value("${app.kakao.oauth.client-secret:}") String clientSecret) {
-        this(clientId, clientSecret, createRestClient());
+            @Value("${app.kakao.oauth.client-secret:}") String clientSecret,
+            ExternalApiMetrics externalApiMetrics) {
+        this(clientId, clientSecret, createRestClient(), externalApiMetrics);
     }
 
     KakaoOAuthClient(String clientId, String clientSecret, RestClient restClient) {
+        this(clientId, clientSecret, restClient, null);
+    }
+
+    private KakaoOAuthClient(
+            String clientId,
+            String clientSecret,
+            RestClient restClient,
+            ExternalApiMetrics externalApiMetrics) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.restClient = restClient;
+        this.externalApiMetrics = externalApiMetrics;
     }
 
     private static RestClient createRestClient() {
@@ -63,12 +76,12 @@ public class KakaoOAuthClient {
         form.add("client_secret", clientSecret);
 
         try {
-            KakaoTokenResponse response = restClient.post()
+            KakaoTokenResponse response = observe("token", () -> restClient.post()
                     .uri(TOKEN_URL)
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form)
                     .retrieve()
-                    .body(KakaoTokenResponse.class);
+                    .body(KakaoTokenResponse.class));
             if (response == null || !StringUtils.hasText(response.accessToken())) {
                 throw upstreamFailure();
             }
@@ -80,16 +93,18 @@ public class KakaoOAuthClient {
             throw upstreamFailure();
         } catch (ResourceAccessException ex) {
             throw unavailable();
+        } catch (RestClientException ex) {
+            throw upstreamFailure();
         }
     }
 
     private KakaoUser requestUser(String accessToken) {
         try {
-            KakaoUserResponse response = restClient.get()
+            KakaoUserResponse response = observe("user_info", () -> restClient.get()
                     .uri(USER_INFO_URL)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                     .retrieve()
-                    .body(KakaoUserResponse.class);
+                    .body(KakaoUserResponse.class));
             if (response == null || response.id() == null) {
                 throw upstreamFailure();
             }
@@ -106,6 +121,8 @@ public class KakaoOAuthClient {
             throw upstreamFailure();
         } catch (ResourceAccessException ex) {
             throw unavailable();
+        } catch (RestClientException ex) {
+            throw upstreamFailure();
         }
     }
 
@@ -115,6 +132,12 @@ public class KakaoOAuthClient {
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "카카오 로그인이 아직 설정되지 않았습니다.");
         }
+    }
+
+    private <T> T observe(String operation, java.util.function.Supplier<T> call) {
+        return externalApiMetrics == null
+                ? call.get()
+                : externalApiMetrics.record("kakao", operation, call);
     }
 
     private KakaoOAuthException upstreamFailure() {

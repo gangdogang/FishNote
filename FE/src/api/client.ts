@@ -44,6 +44,22 @@ export const apiClient = axios.create({
   },
 });
 
+/**
+ * Builds a sibling version URL from the configured API base without assuming
+ * that the frontend and backend share an origin.
+ *
+ * Examples:
+ * - `/api/v1` -> `/api/v2/fish`
+ * - `https://api.example.com/api/v1` -> `https://api.example.com/api/v2/fish`
+ */
+export function apiVersionUrl(version: number, resourcePath: string) {
+  const configuredBase = String(apiClient.defaults.baseURL ?? '').replace(/\/+$/, '');
+  const versionBase = /\/v\d+$/.test(configuredBase)
+    ? configuredBase.replace(/\/v\d+$/, `/v${version}`)
+    : `${configuredBase}/v${version}`;
+  return `${versionBase}/${resourcePath.replace(/^\/+/, '')}`;
+}
+
 function isLoginRequest(url?: string) {
   if (!url) return false;
 
@@ -76,4 +92,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-

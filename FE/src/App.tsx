@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 import { SkeletonCards } from './components/Skeletons';
@@ -21,20 +21,22 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function RouteFallback() {
   return (
-    <main className="mx-auto max-w-[1180px] px-4 pb-20 pt-7 sm:px-7">
+    <div className="mx-auto max-w-content px-4 pb-20 pt-7 sm:px-7">
       <SkeletonCards />
-    </main>
+    </div>
   );
 }
 
 export default function App() {
+  const location = useLocation();
+
   return (
     <AppLayout>
-      <ErrorBoundary>
+      <ErrorBoundary key={location.pathname}>
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/fish/:id" element={<FishDetailPage />} />
+            <Route path="/fish/:identifier" element={<FishDetailPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/saved" element={<SavedPage />} />
             <Route path="/calendar" element={<CalendarPage />} />

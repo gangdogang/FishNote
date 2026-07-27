@@ -2,6 +2,8 @@ package com.fishnote.fish;
 
 import java.util.Locale;
 import java.util.Set;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 /**
@@ -15,10 +17,21 @@ public final class FishSpecifications {
 
     /** name 또는 nameEn 부분 일치 (대소문자 무시) */
     public static Specification<Fish> matchesSearch(String keyword) {
-        String pattern = "%" + escapeLike(keyword.toLowerCase(Locale.ROOT)) + "%";
-        return (root, query, cb) -> cb.or(
-                cb.like(cb.lower(root.get("name")), pattern, '\\'),
-                cb.like(cb.lower(root.get("nameEn")), pattern, '\\'));
+        String normalized = keyword.toLowerCase(Locale.ROOT).trim();
+        String pattern = "%" + escapeLike(normalized) + "%";
+        String compactPattern = "%" + escapeLike(compact(normalized)) + "%";
+        return (root, query, cb) -> {
+            Subquery<Long> aliasMatch = query.subquery(Long.class);
+            Root<FishAlias> alias = aliasMatch.from(FishAlias.class);
+            aliasMatch.select(alias.get("id"));
+            aliasMatch.where(
+                    cb.equal(alias.get("fish"), root),
+                    cb.like(cb.lower(alias.get("alias")), compactPattern, '\\'));
+            return cb.or(
+                    cb.like(cb.lower(root.get("name")), pattern, '\\'),
+                    cb.like(cb.lower(root.get("nameEn")), pattern, '\\'),
+                    cb.exists(aliasMatch));
+        };
     }
 
     /** 제철 월이 주어진 월 집합(계절)과 하나라도 겹침 */
@@ -57,5 +70,9 @@ public final class FishSpecifications {
                 .replace("\\", "\\\\")
                 .replace("%", "\\%")
                 .replace("_", "\\_");
+    }
+
+    private static String compact(String keyword) {
+        return keyword.replaceAll("\\s+", "");
     }
 }

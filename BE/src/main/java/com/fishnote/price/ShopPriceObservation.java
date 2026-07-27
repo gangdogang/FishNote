@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -17,11 +19,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.Check;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
+@Check(constraints = "price_min_krw > 0 AND price_max_krw > 0 AND price_min_krw <= price_max_krw AND confidence BETWEEN 0 AND 1")
 @Table(
         name = "shop_price_observation",
         indexes = {
@@ -85,8 +89,17 @@ public class ShopPriceObservation {
     @Column(name = "raw_text", nullable = false, columnDefinition = "text")
     private String rawText;
 
+    @Column(name = "dedup_hash", nullable = false, unique = true, length = 64)
+    private String dedupHash;
+
     @CreationTimestamp
     @ColumnDefault("now()")
     @Column(name = "collected_at", nullable = false, updatable = false)
     private OffsetDateTime collectedAt;
+
+    @PrePersist
+    @PreUpdate
+    void refreshDedupHash() {
+        dedupHash = DedupKeyFactory.create(this);
+    }
 }

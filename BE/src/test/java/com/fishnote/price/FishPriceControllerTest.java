@@ -9,8 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fishnote.fish.Fish;
 import com.fishnote.fish.FishRepository;
+import jakarta.persistence.EntityManagerFactory;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import org.hibernate.SessionFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,9 @@ class FishPriceControllerTest {
     @Autowired
     private ShopPriceObservationRepository observationRepository;
 
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
+
     private Fish fish;
 
     @BeforeEach
@@ -50,10 +55,16 @@ class FishPriceControllerTest {
 
     @Test
     void returnsRecentPricesWithoutInternalCollectionFields() throws Exception {
+        OffsetDateTime yesterdayNoon = OffsetDateTime.now(ShopPriceParser.KST)
+                .minusDays(1)
+                .withHour(12)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0);
         observationRepository.save(observation(
-                OffsetDateTime.now(ShopPriceParser.KST).minusHours(2), "윤호수산", 31000, 33000));
+                yesterdayNoon, "윤호수산", 31000, 33000));
         observationRepository.save(observation(
-                OffsetDateTime.now(ShopPriceParser.KST).minusHours(1), "성전물산", 32000, 34000));
+                yesterdayNoon.plusHours(1), "성전물산", 32000, 34000));
         observationRepository.save(observation(
                 OffsetDateTime.now(ShopPriceParser.KST).minusDays(20), "윤호수산", 25000, 25000));
 
@@ -61,6 +72,13 @@ class FishPriceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fishId", is(fish.getId().intValue())))
                 .andExpect(jsonPath("$.days", is(14)))
+                .andExpect(jsonPath("$.resolution", is("DAY")))
+                .andExpect(jsonPath("$.maxPoints", is(30)))
+                .andExpect(jsonPath("$.currency", is("KRW")))
+                .andExpect(jsonPath("$.normalizedUnit", is("kg")))
+                .andExpect(jsonPath("$.sourceCount", is(2)))
+                .andExpect(jsonPath("$.noDataReason").doesNotExist())
+                .andExpect(jsonPath("$.asOf").exists())
                 .andExpect(jsonPath("$.observationCount", is(2)))
                 .andExpect(jsonPath("$.latest.priceMinKrw", is(32000)))
                 .andExpect(jsonPath("$.latest.priceMaxKrw", is(34000)))
@@ -99,14 +117,67 @@ class FishPriceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.days", is(30)))
                 .andExpect(jsonPath("$.observationCount", is(0)))
+                .andExpect(jsonPath("$.currency", is("KRW")))
+                .andExpect(jsonPath("$.noDataReason", is("NO_OBSERVATIONS_IN_RANGE")))
+                .andExpect(jsonPath("$.asOf").doesNotExist())
                 .andExpect(jsonPath("$.latest").doesNotExist())
                 .andExpect(jsonPath("$.recent.length()", is(0)));
+    }
+
+    @Test
+    void appliesResolutionPointLimitAndVariantFilter() throws Exception {
+        OffsetDateTime now = OffsetDateTime.now(ShopPriceParser.KST);
+        for (int day = 0; day < 12; day++) {
+            observationRepository.save(observation(
+                    now.minusDays(day), "윤호수산", 30_000 + day, 32_000 + day));
+        }
+        ShopPriceObservation natural = observation(now.minusHours(1), "성전물산", 40_000, 42_000);
+        natural.setCondition("자연산");
+        natural.setOrigin("완도");
+        observationRepository.save(natural);
+
+        mockMvc.perform(get("/api/v1/fish/{fishId}/prices", fish.getId())
+                        .param("days", "30")
+                        .param("resolution", "WEEK")
+                        .param("maxPoints", "2")
+                        .param("variantKey", "양식|제주|kg"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolution", is("WEEK")))
+                .andExpect(jsonPath("$.maxPoints", is(2)))
+                .andExpect(jsonPath("$.variantKey", is("양식|제주|kg")))
+                .andExpect(jsonPath("$.observationCount", is(12)))
+                .andExpect(jsonPath("$.dailyAverage.length()").value(org.hamcrest.Matchers.lessThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.byVariant.length()", is(1)))
+                .andExpect(jsonPath("$.byVariant[0].variantKey", is("양식|제주|kg")));
+
+        mockMvc.perform(get("/api/v1/fish/{fishId}/prices", fish.getId())
+                        .param("variantKey", "없는|조건|kg"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.observationCount", is(0)))
+                .andExpect(jsonPath("$.noDataReason", is("VARIANT_NOT_FOUND")));
     }
 
     @Test
     void returnsNotFoundForMissingFish() throws Exception {
         mockMvc.perform(get("/api/v1/fish/{fishId}/prices", Long.MAX_VALUE))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void priceSummaryUsesAtMostTwoSqlStatements() throws Exception {
+        observationRepository.save(observation(
+                OffsetDateTime.now(ShopPriceParser.KST).minusHours(1),
+                "윤호수산",
+                31_000,
+                33_000));
+        SessionFactory sessionFactory = entityManagerFactory.unwrap(SessionFactory.class);
+        sessionFactory.getStatistics().setStatisticsEnabled(true);
+        sessionFactory.getStatistics().clear();
+
+        mockMvc.perform(get("/api/v1/fish/{fishId}/prices", fish.getId()))
+                .andExpect(status().isOk());
+
+        assertThat(sessionFactory.getStatistics().getPrepareStatementCount()).isLessThanOrEqualTo(2);
     }
 
     private ShopPriceObservation observation(OffsetDateTime observedAt, String shopName, int minPrice, int maxPrice) {

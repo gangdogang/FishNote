@@ -11,15 +11,15 @@ export default function SeasonBar({ months }: SeasonBarProps) {
       {Array.from({ length: 12 }, (_, index) => index + 1).map((month) => (
         <div key={month} className="relative min-w-0">
           {month === currentMonth ? (
-            <span className="absolute -top-[16px] left-1/2 -translate-x-1/2 whitespace-nowrap text-10 font-bold leading-none text-sea">
+            <span className="absolute -top-[16px] left-1/2 -translate-x-1/2 whitespace-nowrap text-caption font-bold leading-none text-accent">
               지금
             </span>
           ) : null}
-          <div className={['h-2 w-full rounded-full', active.has(month) ? 'bg-sea' : 'bg-chipbg'].join(' ')} />
+          <div className={['h-2 w-full rounded-full', active.has(month) ? 'bg-primary' : 'bg-chipbg'].join(' ')} />
           <span
             className={[
-              'mt-[7px] block text-center text-10 leading-none',
-              month === currentMonth ? 'font-bold text-sea' : 'text-ink-mute',
+              'mt-[7px] block text-center text-caption leading-none',
+              month === currentMonth ? 'font-bold text-accent' : 'text-ink-mute',
             ].join(' ')}
           >
             {month}

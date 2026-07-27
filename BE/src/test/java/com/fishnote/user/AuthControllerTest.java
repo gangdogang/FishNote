@@ -1,8 +1,10 @@
 package com.fishnote.user;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -11,7 +13,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +28,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.slf4j.LoggerFactory;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -142,12 +150,17 @@ class AuthControllerTest {
     @Test
     void kakaoLoginCreatesAccountAndReturnsFishnoteToken() throws Exception {
         String redirectUri = "http://localhost:5173/auth/kakao/callback";
+        AtomicBoolean externalCallHadTransaction = new AtomicBoolean(true);
         when(kakaoOAuthClient.authenticate("authorization-code", redirectUri))
-                .thenReturn(new KakaoOAuthClient.KakaoUser(
-                        "kakao-user-123",
-                        "kakao@example.com",
-                        "카카오회러버",
-                        true));
+                .thenAnswer(invocation -> {
+                    externalCallHadTransaction.set(
+                            TransactionSynchronizationManager.isActualTransactionActive());
+                    return new KakaoOAuthClient.KakaoUser(
+                            "kakao-user-123",
+                            "kakao@example.com",
+                            "카카오회러버",
+                            true);
+                });
 
         String loginResponse = mockMvc.perform(post("/api/v1/auth/kakao")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -169,8 +182,48 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.nickname", is("카카오회러버")))
                 .andExpect(jsonPath("$.hasPassword", is(false)));
 
-        org.assertj.core.api.Assertions.assertThat(userRepository.count()).isEqualTo(1);
-        org.assertj.core.api.Assertions.assertThat(oauthAccountRepository.count()).isEqualTo(1);
+        assertThat(externalCallHadTransaction.get()).isFalse();
+        assertThat(userRepository.count()).isEqualTo(1);
+        assertThat(oauthAccountRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void rejectsNonAllowlistedRedirectsBeforeCallingKakao() throws Exception {
+        List<String> rejectedUris = List.of(
+                "https://evil.example/auth/kakao/callback",
+                "http://localhost:5173/auth/kakao/callback/",
+                "http://localhost:5173/auth/kakao/callback?next=/",
+                "http://LOCALHOST:5173/auth/kakao/callback",
+                "http://127.0.0.1:5173/auth/kakao/callback",
+                " http://localhost:5173/auth/kakao/callback");
+
+        for (String rejectedUri : rejectedUris) {
+            mockMvc.perform(post("/api/v1/auth/kakao")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json(Map.of(
+                                    "code", "authorization-code",
+                                    "redirectUri", rejectedUri))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status", is(400)))
+                    .andExpect(jsonPath("$.message", is("허용되지 않은 카카오 redirectUri입니다.")));
+        }
+
+        verifyNoInteractions(kakaoOAuthClient);
+        assertThat(userRepository.count()).isZero();
+        assertThat(oauthAccountRepository.count()).isZero();
+    }
+
+    @Test
+    void keepsSensitiveFrameworkBodyLoggingDisabled() {
+        Logger restClientLogger =
+                (Logger) LoggerFactory.getLogger("org.springframework.web.client.DefaultRestClient");
+        Logger mvcBodyLogger = (Logger) LoggerFactory.getLogger(
+                "org.springframework.web.servlet.mvc.method.annotation.RequestResponseBodyMethodProcessor");
+
+        assertThat(restClientLogger.getLevel()).isEqualTo(Level.INFO);
+        assertThat(restClientLogger.isDebugEnabled()).isFalse();
+        assertThat(mvcBodyLogger.getLevel()).isEqualTo(Level.INFO);
+        assertThat(mvcBodyLogger.isDebugEnabled()).isFalse();
     }
 
     @Test

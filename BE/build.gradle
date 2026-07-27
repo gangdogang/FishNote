@@ -16,12 +16,31 @@ repositories {
 	mavenCentral()
 }
 
+sourceSets {
+	integrationTest {
+		compileClasspath += sourceSets.main.output
+		runtimeClasspath += sourceSets.main.output
+	}
+}
+
+configurations {
+	integrationTestImplementation.extendsFrom testImplementation
+	integrationTestCompileOnly.extendsFrom testCompileOnly
+	integrationTestAnnotationProcessor.extendsFrom testAnnotationProcessor
+	// Keep H2 on the fast test runtime only; integration tests use the main PostgreSQL driver.
+	integrationTestRuntimeOnly.extendsFrom runtimeOnly
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'com.cloudinary:cloudinary-http5:2.4.0'
+	implementation 'com.github.ben-manes.caffeine:caffeine'
+	implementation 'com.twelvemonkeys.imageio:imageio-webp:3.13.1'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
 	implementation 'org.flywaydb:flyway-core'
 	implementation 'org.flywaydb:flyway-database-postgresql'
@@ -35,10 +54,44 @@ dependencies {
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
+	integrationTestImplementation 'org.testcontainers:junit-jupiter'
+	integrationTestImplementation 'org.testcontainers:postgresql'
+	integrationTestRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.register('pythonPriceParserTest', Exec) {
+	description = 'Runs the Python price-parser alias contract and Java parity fixtures.'
+	group = 'verification'
+	workingDir rootProject.projectDir.parentFile
+	commandLine 'python3', '-m', 'unittest', 'scripts/test_kakao_price_parser.py'
+	environment 'PYTHONDONTWRITEBYTECODE', '1'
+}
+
+tasks.register('pythonFishImageManifestTest', Exec) {
+	description = 'Validates the reviewed fish-image manifest and its generated Flyway seed.'
+	group = 'verification'
+	workingDir rootProject.projectDir.parentFile
+	commandLine 'python3', '-m', 'unittest', 'scripts/test_fish_image_manifest.py'
+	environment 'PYTHONDONTWRITEBYTECODE', '1'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	dependsOn tasks.named('pythonPriceParserTest'), tasks.named('pythonFishImageManifestTest')
+}
+
+tasks.register('integrationTest', Test) {
+	description = 'Runs PostgreSQL integration tests.'
+	group = 'verification'
+	testClassesDirs = sourceSets.integrationTest.output.classesDirs
+	classpath = sourceSets.integrationTest.runtimeClasspath
+	outputs.file(layout.buildDirectory.file('reports/baseline/backend-baseline.json'))
+	useJUnitPlatform()
+	shouldRunAfter tasks.named('test')
+}
+
+tasks.named('check') {
+	dependsOn tasks.named('integrationTest')
 }
 
 jar {

@@ -34,6 +34,9 @@ function useAuthState() {
     function syncAccessToken() {
       const nextAccessToken = getStoredAccessToken();
       setAccessToken(nextAccessToken);
+      // Review payloads contain viewer-specific fields (`mine`, `viewerHelpful`).
+      // Never reuse an anonymous/previous-viewer response across an auth boundary.
+      queryClient.removeQueries({ queryKey: ['reviews'] });
       if (!nextAccessToken) {
         queryClient.removeQueries({ queryKey: authMeQueryKey });
         queryClient.removeQueries({ queryKey: bookmarksMeQueryKey });

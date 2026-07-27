@@ -3,17 +3,21 @@ package com.fishnote.price;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fishnote.fish.Fish;
+import com.fishnote.fish.FishAliasType;
 import com.fishnote.fish.FishRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -34,8 +38,12 @@ class TelegramPriceWebhookControllerTest {
     @Autowired
     private ShopPriceObservationRepository shopPriceObservationRepository;
 
+    @MockBean
+    private TelegramBotClient telegramBotClient;
+
     @BeforeEach
     void setUp() {
+        reset(telegramBotClient);
         shopPriceObservationRepository.deleteAll();
         fishRepository.deleteAll();
         fishRepository.save(fish("광어"));
@@ -77,6 +85,8 @@ class TelegramPriceWebhookControllerTest {
         assertThat(shopPriceObservationRepository.findAll())
                 .extracting(ShopPriceObservation::getPriceMinKrw)
                 .containsExactlyInAnyOrder(32000, 20000);
+        verify(telegramBotClient, org.mockito.Mockito.timeout(2_000).times(2))
+                .sendMessage(org.mockito.ArgumentMatchers.eq("1234"), org.mockito.ArgumentMatchers.anyString());
     }
 
     @Test
@@ -86,14 +96,38 @@ class TelegramPriceWebhookControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"message\":{\"text\":\"제주광어2.4kㅡ32000\"}}"))
                 .andExpect(status().isUnauthorized());
+
+        verify(telegramBotClient, org.mockito.Mockito.after(300).never())
+                .sendMessage(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void rejectsOversizedJsonBeforeTelegramDeserializationOrImport() throws Exception {
+        mockMvc.perform(post("/api/v1/integrations/telegram/price-updates")
+                        .header("X-Telegram-Bot-Api-Secret-Token", "test-secret")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":{\"text\":\"" + "a".repeat(70_000) + "\"}}"))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.code", is("PAYLOAD_TOO_LARGE")))
+                .andExpect(jsonPath("$.fieldErrors").isMap());
+
+        assertThat(shopPriceObservationRepository.count()).isZero();
+        verify(telegramBotClient, org.mockito.Mockito.after(300).never())
+                .sendMessage(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     private Fish fish(String name) {
         Fish fish = new Fish();
         fish.setName(name);
+        fish.setSlug("광어".equals(name) ? "gwangeo" : "yeoneo");
         fish.setNameEn(name);
         fish.setDescription(name + " 설명");
         fish.setPriceLevel((short) 2);
+        fish.addAlias(name, FishAliasType.STANDARD);
+        if ("광어".equals(name)) {
+            fish.addAlias("제주광어", FishAliasType.MARKET);
+            fish.addAlias("찰광어", FishAliasType.MARKET);
+        }
         return fish;
     }
 }

@@ -11,7 +11,7 @@ export default function TermsPage() {
       description="FishNote를 안전하고 즐겁게 이용하기 위해 필요한 기본 규칙입니다."
     >
       <InfoSection title="서비스의 목적">
-        <p>FishNote는 생선의 제철, 맛, 가격대와 이용자 후기를 참고할 수 있도록 제공하는 정보 서비스입니다.</p>
+        <p>FishNote는 횟감의 제철, 맛, 가격대와 이용자 후기를 참고할 수 있도록 제공하는 정보 서비스입니다.</p>
       </InfoSection>
 
       <InfoSection title="정보 이용 시 유의사항">

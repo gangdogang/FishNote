@@ -30,6 +30,8 @@ public class AuthService {
     private final ReviewRepository reviewRepository;
     private final UserOAuthAccountRepository oauthAccountRepository;
     private final KakaoOAuthClient kakaoOAuthClient;
+    private final KakaoRedirectUriPolicy kakaoRedirectUriPolicy;
+    private final KakaoAccountService kakaoAccountService;
 
     public AuthService(
             UserRepository userRepository,
@@ -38,7 +40,9 @@ public class AuthService {
             UserBookmarkRepository bookmarkRepository,
             ReviewRepository reviewRepository,
             UserOAuthAccountRepository oauthAccountRepository,
-            KakaoOAuthClient kakaoOAuthClient) {
+            KakaoOAuthClient kakaoOAuthClient,
+            KakaoRedirectUriPolicy kakaoRedirectUriPolicy,
+            KakaoAccountService kakaoAccountService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -46,6 +50,8 @@ public class AuthService {
         this.reviewRepository = reviewRepository;
         this.oauthAccountRepository = oauthAccountRepository;
         this.kakaoOAuthClient = kakaoOAuthClient;
+        this.kakaoRedirectUriPolicy = kakaoRedirectUriPolicy;
+        this.kakaoAccountService = kakaoAccountService;
     }
 
     @Transactional
@@ -79,18 +85,16 @@ public class AuthService {
         return new AuthLoginResponse(jwtTokenProvider.createToken(user.getId()), user.getNickname());
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public AuthLoginResponse loginWithKakao(KakaoLoginRequest request) {
+        kakaoRedirectUriPolicy.validate(request.redirectUri());
         KakaoOAuthClient.KakaoUser kakaoUser = kakaoOAuthClient.authenticate(
                 request.code(),
                 request.redirectUri());
-
-        User user = oauthAccountRepository
-                .findByProviderAndProviderUserId(OAuthProvider.KAKAO, kakaoUser.providerUserId())
-                .map(UserOAuthAccount::getUser)
-                .orElseGet(() -> registerKakaoUser(kakaoUser));
-
-        return new AuthLoginResponse(jwtTokenProvider.createToken(user.getId()), user.getNickname());
+        KakaoAccountService.KakaoAccount account = kakaoAccountService.login(kakaoUser);
+        return new AuthLoginResponse(
+                jwtTokenProvider.createToken(account.userId()),
+                account.nickname());
     }
 
     @Transactional(readOnly = true)
@@ -121,42 +125,6 @@ public class AuthService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getPasswordHash() != null);
-    }
-
-    private User registerKakaoUser(KakaoOAuthClient.KakaoUser kakaoUser) {
-        String verifiedEmail = kakaoUser.verifiedEmail()
-                && kakaoUser.email() != null
-                && !kakaoUser.email().isBlank()
-                ? normalizeEmail(kakaoUser.email())
-                : null;
-
-        User user = verifiedEmail == null ? createKakaoUser(null, kakaoUser.nickname())
-                : userRepository.findByEmail(verifiedEmail).orElseGet(() ->
-                        createKakaoUser(verifiedEmail, kakaoUser.nickname()));
-
-        if (oauthAccountRepository.existsByProviderAndUserId(OAuthProvider.KAKAO, user.getId())) {
-            throw new ConflictException("이 이메일 계정에는 다른 카카오 계정이 연결되어 있습니다.");
-        }
-
-        oauthAccountRepository.saveAndFlush(
-                new UserOAuthAccount(OAuthProvider.KAKAO, kakaoUser.providerUserId(), user));
-        return user;
-    }
-
-    private User createKakaoUser(String email, String nickname) {
-        User created = new User();
-        created.setEmail(email);
-        created.setPasswordHash(null);
-        created.setNickname(normalizeNickname(nickname));
-        return userRepository.saveAndFlush(created);
-    }
-
-    private String normalizeNickname(String nickname) {
-        String normalized = nickname == null ? "" : nickname.trim();
-        if (normalized.isEmpty()) {
-            return "FishNote 사용자";
-        }
-        return normalized.length() <= 30 ? normalized : normalized.substring(0, 30);
     }
 
     private String normalizeEmail(String email) {

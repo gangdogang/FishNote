@@ -47,7 +47,7 @@ export default function FilterChips({ season, taste, onSeasonChange, onTasteChan
         <button
           type="button"
           onClick={onReset}
-          className="ml-1 min-h-11 px-2 text-13 font-semibold text-sea transition hover:text-sea-deep"
+          className="ml-1 min-h-11 px-2 text-body-sm font-semibold text-accent transition hover:text-accent-hover"
         >
           필터 초기화
         </button>

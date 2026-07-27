@@ -1,10 +1,12 @@
 package com.fishnote.review;
 
+import com.fishnote.cache.FishStatsChangedEvent;
 import com.fishnote.common.ForbiddenException;
 import com.fishnote.common.NotFoundException;
 import com.fishnote.common.UnauthorizedException;
 import com.fishnote.fish.Fish;
 import com.fishnote.fish.FishRepository;
+import com.fishnote.image.ImageAssetAttachmentService;
 import com.fishnote.review.dto.ReviewHelpfulResponse;
 import com.fishnote.review.dto.ReviewListResponse;
 import com.fishnote.review.dto.ReviewRequest;
@@ -16,6 +18,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -28,15 +31,14 @@ import org.springframework.util.StringUtils;
 public class ReviewService {
 
     private static final int MAX_PAGE_SIZE = 100;
-    // 서비스가 발급한 Cloudinary URL만 허용 (임의 외부 URL·javascript: 스킴 저장 방지)
-    private static final java.util.regex.Pattern ALLOWED_IMAGE_URL =
-            java.util.regex.Pattern.compile("^https://res\\.cloudinary\\.com/[\\w\\-./%]+$");
-
     private final FishRepository fishRepository;
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ReviewHelpfulVoteRepository helpfulVoteRepository;
+    private final ImageAssetAttachmentService imageAssetAttachmentService;
+    private final FishRatingStatReader ratingStatReader;
+    private final ApplicationEventPublisher eventPublisher;
     private final String helpfulVotePepper;
 
     public ReviewService(
@@ -45,12 +47,18 @@ public class ReviewService {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             ReviewHelpfulVoteRepository helpfulVoteRepository,
+            ImageAssetAttachmentService imageAssetAttachmentService,
+            FishRatingStatReader ratingStatReader,
+            ApplicationEventPublisher eventPublisher,
             @Value("${app.helpful-vote.pepper:fishnote-helpful-vote}") String helpfulVotePepper) {
         this.fishRepository = fishRepository;
         this.reviewRepository = reviewRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.helpfulVoteRepository = helpfulVoteRepository;
+        this.imageAssetAttachmentService = imageAssetAttachmentService;
+        this.ratingStatReader = ratingStatReader;
+        this.eventPublisher = eventPublisher;
         this.helpfulVotePepper = helpfulVotePepper;
         if ("fishnote-helpful-vote".equals(helpfulVotePepper)) {
             // 기본 pepper 사용 시 voter-key 해시가 예측 가능해짐. 운영에서는 HELPFUL_VOTE_PEPPER 필수 설정.
@@ -66,7 +74,7 @@ public class ReviewService {
         int cappedSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
         Pageable pageable = PageRequest.of(Math.max(page, 0), cappedSize, reviewSort(sort));
         // 평균·개수는 개별 쿼리 대신 그룹 집계 1회로 (원거리 DB 왕복 최소화)
-        FishRatingStat stat = reviewRepository.findRatingStatsByFishIds(java.util.List.of(fishId)).stream()
+        FishRatingStat stat = ratingStatReader.findByFishIds(java.util.List.of(fishId)).stream()
                 .findFirst()
                 .orElse(null);
         long totalCount = stat == null ? 0 : stat.getReviewCount();
@@ -74,6 +82,7 @@ public class ReviewService {
                 fishId,
                 averageRating(stat),
                 totalCount,
+                stat == null ? 0 : stat.getRatingCount(),
                 RatingDistribution.from(reviewRepository.countByRatingForFishId(fishId)),
                 reviewRepository.findAllByFishId(fishId, pageable).stream()
                         .map(review -> toResponse(review, userId))
@@ -84,16 +93,20 @@ public class ReviewService {
     }
 
     @Transactional
-    public ReviewResponse createReview(Long fishId, ReviewRequest request, Long userId) {
+    public ReviewResponse createReview(
+            Long fishId,
+            ReviewRequest request,
+            Long userId,
+            String imageUploaderKey) {
         Fish fish = fishRepository.findById(fishId)
-                .orElseThrow(() -> new NotFoundException("생선을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("횟감을 찾을 수 없습니다."));
         User user = userId == null ? null : findUser(userId);
 
         Review review = new Review();
         review.setFish(fish);
         review.setRating(request.rating());
         review.setContent(request.content());
-        review.setImageUrl(validImageUrl(request.imageUrl()));
+        review.setImageUrl(null);
         if (user == null) {
             validateAnonymousReview(request);
             review.setNickname(request.nickname());
@@ -104,7 +117,14 @@ public class ReviewService {
             review.setPasswordHash(null);
         }
 
-        return toResponse(reviewRepository.save(review), userId);
+        Review saved = reviewRepository.saveAndFlush(review);
+        saved.setImageUrl(imageAssetAttachmentService.attach(
+                request.imageAssetId(),
+                request.imageUrl(),
+                imageUploaderKey,
+                saved));
+        eventPublisher.publishEvent(new FishStatsChangedEvent(fish.getId(), fish.getSlug()));
+        return toResponse(saved, userId);
     }
 
     @Transactional
@@ -112,7 +132,7 @@ public class ReviewService {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("후기를 찾을 수 없습니다."));
         if (isMine(review, userId)) {
-            reviewRepository.delete(review);
+            deleteReviewRecord(review);
             return;
         }
 
@@ -120,24 +140,23 @@ public class ReviewService {
         if (review.getPasswordHash() == null || !passwordEncoder.matches(validPassword, review.getPasswordHash())) {
             throw new ForbiddenException("비밀번호가 일치하지 않습니다.");
         }
+        deleteReviewRecord(review);
+    }
+
+    private void deleteReviewRecord(Review review) {
+        Long fishId = review.getFish().getId();
+        String fishSlug = review.getFish().getSlug();
+        imageAssetAttachmentService.queueReviewImageDeletion(review.getId());
         reviewRepository.delete(review);
+        eventPublisher.publishEvent(new FishStatsChangedEvent(fishId, fishSlug));
     }
 
     @Transactional
     public ReviewHelpfulResponse increaseHelpfulCount(Long reviewId, Long userId, String clientIp) {
-        Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new NotFoundException("후기를 찾을 수 없습니다."));
         String voterKey = voterKey(userId, clientIp);
-        if (helpfulVoteRepository.existsByReviewIdAndVoterKey(reviewId, voterKey)) {
-            return new ReviewHelpfulResponse(reviewId, review.getHelpfulCount());
-        }
-
-        helpfulVoteRepository.save(new ReviewHelpfulVote(review, voterKey));
-        // read-modify-write 대신 원자적 UPDATE로 동시 요청 시 증가분 유실 방지
-        if (reviewRepository.incrementHelpfulCount(reviewId) == 0) {
-            throw new NotFoundException("후기를 찾을 수 없습니다.");
-        }
-        int helpfulCount = reviewRepository.findHelpfulCountById(reviewId).orElse(0);
+        int helpfulCount = helpfulVoteRepository
+                .increaseHelpfulCountAtomically(reviewId, voterKey)
+                .orElseThrow(() -> new NotFoundException("후기를 찾을 수 없습니다."));
         return new ReviewHelpfulResponse(reviewId, helpfulCount);
     }
 
@@ -154,7 +173,7 @@ public class ReviewService {
 
     private void ensureFishExists(Long fishId) {
         if (!fishRepository.existsById(fishId)) {
-            throw new NotFoundException("생선을 찾을 수 없습니다.");
+            throw new NotFoundException("횟감을 찾을 수 없습니다.");
         }
     }
 
@@ -171,16 +190,6 @@ public class ReviewService {
             throw new IllegalArgumentException("nickname은 30자 이하여야 합니다.");
         }
         validPassword(request.password());
-    }
-
-    private String validImageUrl(String imageUrl) {
-        if (!StringUtils.hasText(imageUrl)) {
-            return null;
-        }
-        if (imageUrl.length() > 500 || !ALLOWED_IMAGE_URL.matcher(imageUrl).matches()) {
-            throw new IllegalArgumentException("imageUrl은 이미지 업로드로 발급된 URL만 사용할 수 있습니다.");
-        }
-        return imageUrl;
     }
 
     private String validPassword(String password) {

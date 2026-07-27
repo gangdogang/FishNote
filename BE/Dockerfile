@@ -8,7 +8,9 @@ RUN chmod +x gradlew
 RUN ./gradlew dependencies --no-daemon
 
 COPY src ./src
-RUN ./gradlew clean build --no-daemon
+# PostgreSQL Testcontainers는 CI 품질 게이트에서 실행한다. 이미지 빌드 단계에는
+# Docker 소켓이 없으므로 검증 task 전체가 아니라 배포 산출물만 생성한다.
+RUN ./gradlew clean bootJar --no-daemon
 
 FROM eclipse-temurin:17-jre
 

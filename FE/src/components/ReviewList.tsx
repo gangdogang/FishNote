@@ -1,20 +1,25 @@
-import { useState } from 'react';
-import { optimizedImageUrl } from '../lib/image';
+import { useRef, useState } from 'react';
+import { ThumbsUp } from 'lucide-react';
+import { firstGrapheme } from '../lib/grapheme';
 import type { Review } from '../types/review';
+import SmartImage from './SmartImage';
 
 interface ReviewListProps {
   reviews: Review[];
   onDelete: (reviewId: number, password?: string) => Promise<boolean>;
   onHelpful: (reviewId: number) => Promise<number | null>;
-  workingReviewId?: number;
 }
 
-export default function ReviewList({ reviews, onDelete, onHelpful, workingReviewId }: ReviewListProps) {
+export default function ReviewList({ reviews, onDelete, onHelpful }: ReviewListProps) {
   const [helpfulReviewIds, setHelpfulReviewIds] = useState<Set<number>>(() => new Set());
   const [helpfulCounts, setHelpfulCounts] = useState<Record<number, number>>({});
   const [message, setMessage] = useState<string | undefined>();
   const [deletingReviewId, setDeletingReviewId] = useState<number | undefined>();
   const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | undefined>();
+  const deletePasswordInputRef = useRef<HTMLInputElement>(null);
+  const workingReviewIdsRef = useRef<Set<number>>(new Set());
+  const [workingReviewIds, setWorkingReviewIds] = useState<Set<number>>(() => new Set());
 
   if (reviews.length === 0) {
     return <div className="rounded-card border border-dashed border-line bg-surface px-5 py-8 text-center text-sm text-ink-mute">첫 후기를 남겨보세요</div>;
@@ -29,34 +34,62 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
       setMessage('이미 도움돼요를 누른 후기예요');
       return;
     }
+    if (!beginReviewWork(reviewId)) return;
 
     setMessage(undefined);
-    const nextCount = await onHelpful(reviewId);
-    if (nextCount === null) return;
+    try {
+      const nextCount = await onHelpful(reviewId);
+      if (nextCount === null) return;
 
-    setHelpfulReviewIds((prev) => new Set(prev).add(reviewId));
-    setHelpfulCounts((prev) => ({ ...prev, [reviewId]: nextCount }));
-    writeHelpfulReviewId(reviewId);
+      setHelpfulReviewIds((prev) => new Set(prev).add(reviewId));
+      setHelpfulCounts((prev) => ({ ...prev, [reviewId]: nextCount }));
+      writeHelpfulReviewId(reviewId);
+    } finally {
+      finishReviewWork(reviewId);
+    }
   }
 
   function openDeleteForm(reviewId: number) {
     setMessage(undefined);
     setDeletingReviewId(reviewId);
     setDeletePassword('');
+    setDeletePasswordError(undefined);
   }
 
   async function handleDelete(review: Review) {
     if (!review.mine && deletePassword.trim().length < 4) {
-      setMessage('비밀번호는 4자 이상 입력해 주세요.');
+      setDeletePasswordError('비밀번호는 4자 이상 입력해 주세요.');
+      deletePasswordInputRef.current?.focus();
       return;
     }
+    if (!beginReviewWork(review.id)) return;
 
     setMessage(undefined);
-    const ok = await onDelete(review.id, review.mine ? undefined : deletePassword);
-    if (!ok) return;
+    try {
+      const ok = await onDelete(review.id, review.mine ? undefined : deletePassword);
+      if (!ok) return;
 
-    setDeletingReviewId(undefined);
-    setDeletePassword('');
+      setDeletingReviewId(undefined);
+      setDeletePassword('');
+      setDeletePasswordError(undefined);
+    } finally {
+      finishReviewWork(review.id);
+    }
+  }
+
+  function beginReviewWork(reviewId: number) {
+    if (workingReviewIdsRef.current.has(reviewId)) return false;
+    const next = new Set(workingReviewIdsRef.current).add(reviewId);
+    workingReviewIdsRef.current = next;
+    setWorkingReviewIds(next);
+    return true;
+  }
+
+  function finishReviewWork(reviewId: number) {
+    const next = new Set(workingReviewIdsRef.current);
+    next.delete(reviewId);
+    workingReviewIdsRef.current = next;
+    setWorkingReviewIds(next);
   }
 
   return (
@@ -66,12 +99,16 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
       {reviews.map((review) => {
         const helpful = isHelpful(review.id);
         const helpfulCount = helpfulCounts[review.id] ?? review.helpfulCount ?? 0;
+        const isWorking = workingReviewIds.has(review.id);
+        const deletePasswordId = `review-${review.id}-delete-password`;
+        const deletePasswordHelperId = `${deletePasswordId}-helper`;
+        const deletePasswordErrorId = `${deletePasswordId}-error`;
 
         return (
           <article key={review.id} className="rounded-card border border-line bg-surface px-4.5 py-4">
             <div className="mb-2 flex items-start gap-2.5">
-              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-sea-soft text-sm font-extrabold text-sea">
-                {getInitial(review.nickname)}
+              <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-accent-soft text-body-sm font-extrabold text-accent">
+                {firstGrapheme(review.nickname, '익')}
               </span>
 
               <div className="min-w-0 flex-1">
@@ -84,7 +121,7 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
 
               <button
                 type="button"
-                disabled={workingReviewId === review.id}
+                disabled={isWorking}
                 onClick={() => openDeleteForm(review.id)}
                 className="ml-auto inline-flex min-h-11 flex-none items-center border-0 bg-transparent px-2 text-xs font-medium text-ink-mute transition hover:text-red-600 dark:text-red-400 disabled:cursor-wait disabled:opacity-50"
               >
@@ -95,28 +132,34 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
             <p className="m-0 mb-3 whitespace-pre-line break-words text-sm leading-[1.7] text-ink">{review.content}</p>
 
             {review.imageUrl ? (
-              <a href={review.imageUrl} target="_blank" rel="noreferrer" className="mb-3 block max-w-[420px]">
-                <img
-                  src={optimizedImageUrl(review.imageUrl, 800)}
-                  alt="후기 사진"
-                  loading="lazy"
-                  decoding="async"
-                  className="max-h-40 w-full rounded-btn border border-line object-cover"
+              <a
+                href={review.imageUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${review.nickname}님의 후기 사진 원본 보기`}
+                className="mb-3 block max-w-[320px] rounded-btn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+              >
+                <SmartImage
+                  legacyUrl={review.imageUrl}
+                  fallbackName="후기"
+                  sizes="(max-width: 639px) calc(100vw - 68px), 320px"
+                  className="rounded-btn border border-line"
                 />
               </a>
             ) : null}
 
             <button
               type="button"
-              disabled={helpful || workingReviewId === review.id}
+              disabled={helpful || isWorking}
               onClick={() => void handleHelpful(review.id)}
               className={[
-                'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.25 py-1.75 text-13 font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sea focus-visible:ring-offset-2',
-                helpful ? 'border-sea bg-sea-soft text-sea' : 'border-line bg-surface text-ink-mute hover:border-sea hover:text-sea',
-                workingReviewId === review.id ? 'cursor-wait opacity-60' : '',
+                'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.25 py-1.75 text-body-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2',
+                helpful ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-surface text-ink-mute hover:border-accent hover:text-accent',
+                isWorking ? 'cursor-wait opacity-60' : '',
               ].join(' ')}
             >
-              👍 도움돼요 {helpfulCount}
+              <ThumbsUp className="h-4 w-4" aria-hidden />
+              도움돼요 {helpfulCount}
               {helpful ? ' · 눌렀어요' : ''}
             </button>
 
@@ -127,14 +170,36 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
                 </p>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   {!review.mine ? (
-                    <input
-                      type="password"
-                      value={deletePassword}
-                      autoFocus
-                      onChange={(event) => setDeletePassword(event.target.value)}
-                      placeholder="비밀번호"
-                      className="min-w-0 flex-1 rounded-btn border border-line bg-surface px-3 py-2 text-13 text-ink outline-none focus:border-sea"
-                    />
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor={deletePasswordId} className="mb-1 block text-xs font-semibold text-ink">
+                        삭제 비밀번호
+                      </label>
+                      <input
+                        ref={deletePasswordInputRef}
+                        id={deletePasswordId}
+                        type="password"
+                        value={deletePassword}
+                        autoFocus
+                        aria-invalid={Boolean(deletePasswordError)}
+                        aria-describedby={deletePasswordError
+                          ? `${deletePasswordHelperId} ${deletePasswordErrorId}`
+                          : deletePasswordHelperId}
+                        onChange={(event) => {
+                          setDeletePassword(event.target.value);
+                          setDeletePasswordError(undefined);
+                        }}
+                        placeholder="비밀번호"
+                        className="w-full min-w-0 rounded-btn border border-control-border bg-surface px-3 py-2 text-base text-ink outline-none focus:border-accent focus-visible:ring-2 focus-visible:ring-focus xl:text-body-sm"
+                      />
+                      <p id={deletePasswordHelperId} className="m-0 mt-1 text-xs leading-[1.5] text-ink-mute">
+                        작성할 때 사용한 비밀번호를 4자 이상 입력해 주세요.
+                      </p>
+                      {deletePasswordError ? (
+                        <p id={deletePasswordErrorId} role="alert" className="m-0 mt-1 text-xs font-medium text-red-700 dark:text-red-400">
+                          {deletePasswordError}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                   <div className="flex gap-2">
                     <button
@@ -142,6 +207,7 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
                       onClick={() => {
                         setDeletingReviewId(undefined);
                         setDeletePassword('');
+                        setDeletePasswordError(undefined);
                         setMessage(undefined);
                       }}
                       className="min-h-11 flex-1 rounded-btn border border-line bg-surface px-3 py-2 text-13 font-semibold text-ink-mute sm:flex-none"
@@ -150,7 +216,7 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
                     </button>
                     <button
                       type="button"
-                      disabled={workingReviewId === review.id}
+                      disabled={isWorking}
                       onClick={() => void handleDelete(review)}
                       className="min-h-11 flex-1 rounded-btn border-0 bg-red-600 px-3 py-2 text-13 font-semibold text-white disabled:cursor-wait disabled:bg-slate-300 dark:disabled:bg-slate-600 sm:flex-none"
                     >
@@ -169,14 +235,10 @@ export default function ReviewList({ reviews, onDelete, onHelpful, workingReview
 
 function RatingValue({ rating }: { rating: number }) {
   return (
-    <span className="whitespace-nowrap text-xs font-bold tabular-nums text-ink" aria-label={`${rating}점`}>
+    <span className="whitespace-nowrap text-xs font-bold tabular-nums text-ink" role="img" aria-label={`${rating}점`}>
       <span className="text-star">★</span> {rating.toFixed(1)}
     </span>
   );
-}
-
-function getInitial(nickname: string) {
-  return nickname.trim().charAt(0) || '익';
 }
 
 function formatDate(date: string) {

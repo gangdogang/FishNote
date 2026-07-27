@@ -7,6 +7,7 @@ public record ReviewListResponse(
         Long fishId,
         double avgRating,
         long totalCount,
+        long ratingCount,
         Map<String, Long> ratingDistribution,
         List<ReviewResponse> reviews,
         int page,

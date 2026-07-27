@@ -1,7 +1,6 @@
 package com.fishnote.user.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record KakaoLoginRequest(
@@ -11,7 +10,6 @@ public record KakaoLoginRequest(
 
         @NotBlank(message = "카카오 redirectUri가 필요합니다.")
         @Size(max = 2048, message = "카카오 redirectUri가 올바르지 않습니다.")
-        @Pattern(regexp = "^https?://.+", message = "카카오 redirectUri가 올바르지 않습니다.")
         String redirectUri
 ) {
 }
