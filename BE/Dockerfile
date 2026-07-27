@@ -24,5 +24,6 @@ USER spring
 
 EXPOSE 8080
 
-# 컨테이너 메모리 한도를 인지하도록 MaxRAMPercentage 사용 (Render 무료 512MB 대응)
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
+# Render 무료 512MB에서는 heap 외 metaspace, code cache, thread stack과 native buffer도
+# 같은 한도를 공유한다. heap을 60%로 제한해 JVM native 영역과 OS에 여유를 남긴다.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60.0", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]

@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -42,19 +42,19 @@ class ImageControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
     private ImageService imageService;
 
-    @MockBean
+    @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
 
-    @MockBean
+    @MockitoBean
     private RateLimitFilter rateLimitFilter;
 
-    @MockBean
+    @MockitoBean
     private ClientIpResolver clientIpResolver;
 
-    @MockBean
+    @MockitoBean
     private ImageUploaderKeyFactory uploaderKeyFactory;
 
     @Test
