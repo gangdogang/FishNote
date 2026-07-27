@@ -73,6 +73,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
   const contentInputRef = useRef<HTMLTextAreaElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewImageRef = useRef<HTMLImageElement>(null);
   const isBusy = submitting || uploading;
   const isMemberReview = Boolean(isAuthenticated && user);
 
@@ -88,8 +89,16 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
   }, [resetKey]);
 
   useEffect(() => {
+    const previewImage = previewImageRef.current;
+    if (!previewImage || !selectedImage) return;
+
+    // Keep the user-controlled File URL out of JSX/HTML construction. An
+    // HTMLImageElement URL property is a URL sink, not an HTML parsing sink.
+    previewImage.src = selectedImage.previewUrl;
+
     return () => {
-      if (selectedImage) URL.revokeObjectURL(selectedImage.previewUrl);
+      previewImage.removeAttribute('src');
+      URL.revokeObjectURL(selectedImage.previewUrl);
     };
   }, [selectedImage]);
 
@@ -353,7 +362,11 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
 
             {selectedImage ? (
               <div className="relative mt-2 h-24 w-24 overflow-hidden rounded-btn border border-line bg-chipbg">
-                <img src={selectedImage.previewUrl} alt="선택한 후기 사진 미리보기" className="h-full w-full object-cover" />
+                <img
+                  ref={previewImageRef}
+                  alt="선택한 후기 사진 미리보기"
+                  className="h-full w-full object-cover"
+                />
                 <button
                   type="button"
                   onClick={removeImage}

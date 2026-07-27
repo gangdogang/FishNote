@@ -160,6 +160,21 @@ describe('ReviewForm accessibility', () => {
     );
   });
 
+  it('검증된 로컬 사진은 HTML 재해석 없이 이미지 URL 속성으로 미리 본다', async () => {
+    const user = userEvent.setup();
+    renderReviewForm();
+
+    await user.upload(
+      screen.getByLabelText('사진 추가'),
+      new File(['jpeg'], 'review.jpg', { type: 'image/jpeg' }),
+    );
+
+    expect(screen.getByAltText('선택한 후기 사진 미리보기')).toHaveAttribute(
+      'src',
+      'blob:review-preview',
+    );
+  });
+
   it('업로드 응답의 assetId와 URL을 후기 요청에 함께 전달한다', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
