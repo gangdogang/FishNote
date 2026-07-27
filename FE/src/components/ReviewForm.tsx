@@ -365,7 +365,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
               JPG, PNG, 정적 GIF, 정적 WebP · 최대 5MB
             </p>
 
-            {selectedImage ? (
+            {selectedImage?.previewUrl.startsWith('blob:') ? (
               <div className="relative mt-2 h-24 w-24 overflow-hidden rounded-btn border border-line bg-chipbg">
                 <img
                   src={selectedImage.previewUrl}
