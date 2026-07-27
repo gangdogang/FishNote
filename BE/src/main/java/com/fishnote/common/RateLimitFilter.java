@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +39,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
     static final String ERROR_CODE = "RATE_LIMITED";
     public static final String RESET_HEADER = "X-RateLimit-Reset";
 
@@ -151,6 +154,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
             throw new IllegalArgumentException("rate-limit cache 크기와 global limit은 양수여야 합니다.");
         }
         this.enabled = enabled;
+        if (enabled) {
+            log.info("애플리케이션 레이트 리미터가 활성화되었습니다.");
+        } else {
+            log.warn("애플리케이션 레이트 리미터가 비활성화되었습니다.");
+        }
         this.objectMapper = objectMapper;
         this.clientIpResolver = clientIpResolver;
         this.window = window;

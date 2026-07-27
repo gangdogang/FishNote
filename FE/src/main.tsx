@@ -1,8 +1,8 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Analytics } from '@vercel/analytics/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router';
 import App from './App';
 import { ToastProvider } from './components/Toast';
 import { AuthProvider } from './hooks/useAuth';
@@ -26,7 +26,7 @@ if (rootElement.dataset.prerendered === 'true') {
   delete rootElement.dataset.prerendered;
 }
 
-ReactDOM.createRoot(rootElement).render(
+createRoot(rootElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <ToastProvider>

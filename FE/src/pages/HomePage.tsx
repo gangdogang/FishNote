@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router';
 import { useMemo, useState, type ReactNode } from 'react';
 import CardCarousel, { CardCarouselItem } from '../components/CardCarousel';
 import FilterChips from '../components/FilterChips';

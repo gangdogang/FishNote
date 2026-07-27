@@ -8,7 +8,7 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = resolve(scriptDirectory, '..');
 const distRoot = resolve(frontendRoot, 'dist');
 const catalogPath = resolve(frontendRoot, 'prerender/catalog.json');
-const siteUrl = new URL(process.env.PUBLIC_SITE_URL || 'https://fishnote.kr');
+const siteUrl = new URL(process.env.PUBLIC_SITE_URL || 'https://www.fishnote.kr');
 const defaultImage = new URL('/fish/gwangeo.jpg', siteUrl).toString();
 const fixedPublicPages = [
   {

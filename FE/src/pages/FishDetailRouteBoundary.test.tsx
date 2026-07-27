@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RefObject } from 'react';
 import type { FishDetail } from '../types/fish';
@@ -64,7 +64,7 @@ vi.mock('../components/ReviewSection', () => ({
     reviewFormProps,
   }: {
     onOpenForm: () => void;
-    reviewFormProps: { formRef: RefObject<HTMLFormElement> };
+    reviewFormProps: { formRef: RefObject<HTMLFormElement | null> };
   }) => (
     <section id="reviews">
       <form ref={reviewFormProps.formRef} aria-label="후기 작성 폼" />

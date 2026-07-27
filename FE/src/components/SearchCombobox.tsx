@@ -46,7 +46,7 @@ export default function SearchCombobox({
   const generatedId = useId();
   const listboxId = `${id}-${generatedId.replace(/:/g, '')}-suggestions`;
   const inputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController>();
+  const abortControllerRef = useRef<AbortController | undefined>(undefined);
   const requestSequenceRef = useRef(0);
   const [focused, setFocused] = useState(false);
   const [interacted, setInteracted] = useState(false);

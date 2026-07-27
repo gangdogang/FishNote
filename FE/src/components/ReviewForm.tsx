@@ -35,7 +35,7 @@ interface ReviewFormProps {
   submitting: boolean;
   error?: string;
   resetKey: number;
-  formRef?: RefObject<HTMLFormElement>;
+  formRef?: RefObject<HTMLFormElement | null>;
   onSubmit: (request: ReviewRequest) => void;
 }
 

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fishnote.kr/sitemap.xml
+Sitemap: https://www.fishnote.kr/sitemap.xml

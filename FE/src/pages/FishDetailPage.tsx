@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import FishIdentitySummary from '../components/FishIdentitySummary';
 import FishMediaGallery from '../components/FishMediaGallery';
 import FishServingTipsSection from '../components/FishServingTipsSection';

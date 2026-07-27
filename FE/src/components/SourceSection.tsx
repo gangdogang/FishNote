@@ -1,5 +1,5 @@
 import { RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import ClaimSourceList from './ClaimSourceList';
 import { CLAIM_ORDER } from '../lib/sourcePresentation';
 import type { FishClaimType, FishSourcesResponse } from '../types/source';

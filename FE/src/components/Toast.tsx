@@ -10,7 +10,7 @@ const TOAST_DURATION_MS = 3200;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
-  const timerRef = useRef<number>();
+  const timerRef = useRef<number | undefined>(undefined);
 
   const showToast = useCallback((message: string) => {
     setToast({ id: Date.now(), message });

@@ -277,7 +277,7 @@ export default function ResponsivePriceChart({
   );
 }
 
-function useMeasuredWidth(containerRef: React.RefObject<HTMLDivElement>) {
+function useMeasuredWidth(containerRef: React.RefObject<HTMLDivElement | null>) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
 
   useLayoutEffect(() => {

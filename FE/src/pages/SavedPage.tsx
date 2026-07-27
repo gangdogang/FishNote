@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { Heart } from 'lucide-react';
 import FishCard from '../components/FishCard';
 import { ErrorState, SkeletonCards } from '../components/Skeletons';
