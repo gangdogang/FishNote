@@ -162,14 +162,8 @@ test('rating, review-photo removal, and price variant controls provide 44px hit 
 
   await expectMinimumHitArea(page.getByRole('radio', { name: '1점' }));
 
-  await page.locator('#review-form input[type="file"]').setInputFiles({
-    name: 'review.png',
-    mimeType: 'image/png',
-    buffer: Buffer.from(
-      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z3L8AAAAASUVORK5CYII=',
-      'base64',
-    ),
-  });
+  await page.locator('#review-form input[type="file"]').setInputFiles('public/fish/gwangeo.jpg');
+  await expect(page.getByRole('img', { name: '선택한 후기 사진 미리보기' })).toBeVisible();
   await expectMinimumHitArea(page.getByRole('button', { name: '사진 제거' }));
 
   const variantGroup = page.getByRole('group', { name: '가격 규격 선택' });

@@ -9,15 +9,25 @@ import ReviewForm from './ReviewForm';
 
 vi.mock('../api/image', () => ({ uploadImage: vi.fn() }));
 
+const drawPreviewImage = vi.fn();
+const closePreviewBitmap = vi.fn();
+
 beforeEach(() => {
   vi.clearAllMocks();
-  Object.defineProperty(URL, 'createObjectURL', {
+  Object.defineProperty(globalThis, 'createImageBitmap', {
     configurable: true,
-    value: vi.fn(() => 'blob:review-preview'),
+    value: vi.fn(async () => ({
+      width: 160,
+      height: 90,
+      close: closePreviewBitmap,
+    })),
   });
-  Object.defineProperty(URL, 'revokeObjectURL', {
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
-    value: vi.fn(),
+    value: vi.fn(() => ({
+      clearRect: vi.fn(),
+      drawImage: drawPreviewImage,
+    })),
   });
 });
 
@@ -158,6 +168,43 @@ describe('ReviewForm accessibility', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'JPG, PNG, 정적 GIF, 정적 WebP 사진만 올릴 수 있어요',
     );
+  });
+
+  it('검증된 로컬 사진은 URL 문자열 없이 canvas 픽셀로 미리 본다', async () => {
+    const user = userEvent.setup();
+    renderReviewForm();
+
+    await user.upload(
+      screen.getByLabelText('사진 추가'),
+      new File(['jpeg'], 'review.jpg', { type: 'image/jpeg' }),
+    );
+
+    expect(screen.getByRole('img', { name: '선택한 후기 사진 미리보기' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(createImageBitmap).toHaveBeenCalledWith(expect.any(File));
+      expect(drawPreviewImage).toHaveBeenCalledOnce();
+      expect(closePreviewBitmap).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('브라우저가 로컬 사진을 디코딩하지 못하면 미리보기를 닫고 오류를 알린다', async () => {
+    const user = userEvent.setup();
+    vi.mocked(createImageBitmap).mockRejectedValueOnce(new Error('decode failed'));
+    renderReviewForm();
+
+    await user.upload(
+      screen.getByLabelText('사진 추가'),
+      new File(['jpeg'], 'review.jpg', { type: 'image/jpeg' }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('img', { name: '선택한 후기 사진 미리보기' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        '사진 미리보기를 안전하게 만들지 못했어요. 다른 사진을 선택해 주세요',
+      );
+    });
   });
 
   it('업로드 응답의 assetId와 URL을 후기 요청에 함께 전달한다', async () => {
