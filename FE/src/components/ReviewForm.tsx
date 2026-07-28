@@ -28,7 +28,6 @@ type FieldErrors = Partial<Record<ReviewFormField, string>>;
 
 interface SelectedImage {
   file: File;
-  previewUrl: string;
 }
 
 interface ReviewFormProps {
@@ -47,9 +46,11 @@ const emptyForm: ReviewFormState = {
 };
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const PREVIEW_CANVAS_SIZE = 192;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = [...ACCEPTED_IMAGE_TYPES].join(',');
 const UPLOAD_ERROR_MESSAGE = '사진 업로드에 실패했어요. 사진 없이 등록하거나 다시 시도해 주세요';
+const PREVIEW_ERROR_MESSAGE = '사진 미리보기를 안전하게 만들지 못했어요. 다른 사진을 선택해 주세요';
 const reviewFormFieldOrder: ReviewFormField[] = ['nickname', 'rating', 'content', 'password', 'image'];
 
 export default function ReviewForm({ submitting, error, resetKey, formRef, onSubmit }: ReviewFormProps) {
@@ -73,6 +74,7 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
   const contentInputRef = useRef<HTMLTextAreaElement>(null);
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const isBusy = submitting || uploading;
   const isMemberReview = Boolean(isAuthenticated && user);
 
@@ -88,8 +90,57 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
   }, [resetKey]);
 
   useEffect(() => {
+    if (!selectedImage) return;
+    const file = selectedImage.file;
+    const canvasElement = previewCanvasRef.current;
+    if (!canvasElement) return;
+
+    let disposed = false;
+    let activeBitmap: ImageBitmap | null = null;
+
+    async function renderPreview(target: HTMLCanvasElement, imageFile: File) {
+      try {
+        const bitmap = await createImageBitmap(imageFile);
+        if (disposed) {
+          bitmap.close();
+          return;
+        }
+
+        activeBitmap = bitmap;
+        const context = target.getContext('2d');
+        if (!context) throw new Error('Canvas 2D context is unavailable');
+
+        target.width = PREVIEW_CANVAS_SIZE;
+        target.height = PREVIEW_CANVAS_SIZE;
+        const scale = Math.max(
+          PREVIEW_CANVAS_SIZE / bitmap.width,
+          PREVIEW_CANVAS_SIZE / bitmap.height,
+        );
+        const width = bitmap.width * scale;
+        const height = bitmap.height * scale;
+
+        context.clearRect(0, 0, PREVIEW_CANVAS_SIZE, PREVIEW_CANVAS_SIZE);
+        context.drawImage(
+          bitmap,
+          (PREVIEW_CANVAS_SIZE - width) / 2,
+          (PREVIEW_CANVAS_SIZE - height) / 2,
+          width,
+          height,
+        );
+        bitmap.close();
+        activeBitmap = null;
+      } catch {
+        if (disposed) return;
+        setSelectedImage(null);
+        setFieldErrors((prev) => ({ ...prev, image: PREVIEW_ERROR_MESSAGE }));
+      }
+    }
+
+    void renderPreview(canvasElement, file);
+
     return () => {
-      if (selectedImage) URL.revokeObjectURL(selectedImage.previewUrl);
+      disposed = true;
+      activeBitmap?.close();
     };
   }, [selectedImage]);
 
@@ -119,10 +170,14 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
       return;
     }
 
-    setSelectedImage({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    });
+    if (typeof createImageBitmap !== 'function') {
+      setSelectedImage(null);
+      setFieldErrors((prev) => ({ ...prev, image: PREVIEW_ERROR_MESSAGE }));
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setSelectedImage({ file });
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
@@ -353,7 +408,14 @@ export default function ReviewForm({ submitting, error, resetKey, formRef, onSub
 
             {selectedImage ? (
               <div className="relative mt-2 h-24 w-24 overflow-hidden rounded-btn border border-line bg-chipbg">
-                <img src={selectedImage.previewUrl} alt="선택한 후기 사진 미리보기" className="h-full w-full object-cover" />
+                <canvas
+                  ref={previewCanvasRef}
+                  role="img"
+                  aria-label="선택한 후기 사진 미리보기"
+                  className="h-full w-full object-cover"
+                >
+                  선택한 후기 사진 미리보기
+                </canvas>
                 <button
                   type="button"
                   onClick={removeImage}

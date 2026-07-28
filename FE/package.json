@@ -25,7 +25,7 @@
     "check": "npm run lint:ci && npm run test && npm run build:ci && npm run test:prerender && npm run test:e2e:run"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.62.7",
+    "@tanstack/react-query": "^5.101.4",
     "@vercel/analytics": "^2.0.1",
     "axios": "^1.7.9",
     "lucide-react": "^0.468.0",
