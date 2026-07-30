@@ -10,6 +10,17 @@ export default function SourcesPage() {
       title="정보 출처"
       description="제철은 산지, 수온, 유통 방식에 따라 달라질 수 있습니다. FishNote는 하나의 정답처럼 단정하지 않고 공공기관 자료와 시장 정보를 교차 확인합니다."
     >
+      <InfoSection title="월별 제철을 정하는 법">
+        <p>
+          각 어종에 대표 제철 월을 등록하고, 해양수산부 ‘이달의 수산물’처럼 공개된 공공기관 지정 이력과
+          교차 확인합니다. 오늘의 수온·어획량·시장 가격을 실시간으로 계산한 값은 아닙니다.
+        </p>
+        <p className="mt-2.5">
+          자연산 계절 어종은 여러 해의 지정 월을 근거로 활용하지만, 양식·연중 공급 어종의 소비 촉진 지정 월은
+          제철 근거로 그대로 사용하지 않습니다.
+        </p>
+      </InfoSection>
+
       <InfoSection title="공개한 원문">
         <ul>
           {PUBLIC_SOURCES.map((source) => (

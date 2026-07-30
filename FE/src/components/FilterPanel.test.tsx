@@ -85,4 +85,24 @@ describe('FilterPanel', () => {
     await user.click(screen.getByRole('button', { name: '초기화' }));
     expect(onReset).toHaveBeenCalledOnce();
   });
+
+  it('카탈로그 facet 수를 접근성 이름을 바꾸지 않고 필터에 표시한다', () => {
+    render(
+      <FilterPanel
+        value={{}}
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        facets={{
+          taste: { '담백': 12 },
+          season: { '3': 7 },
+          priceLevel: { '2': 5 },
+          category: {},
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: '담백' })).toHaveTextContent('담백12');
+    expect(screen.getByRole('button', { name: '3월' })).toHaveTextContent('3월7');
+    expect(screen.getByRole('button', { name: '₩₩ 보통' })).toHaveTextContent('₩₩ 보통5');
+  });
 });

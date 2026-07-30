@@ -68,6 +68,8 @@ describe('FishMediaGallery', () => {
     });
     expect(container.querySelector('img[src*="legacy.example.com"]')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '방어 이미지 1' })).toHaveAttribute('aria-pressed', 'true');
+    expect(primary.closest('.fish-gallery-image')).toBeInTheDocument();
+    expect(screen.getByText('1 / 2')).toHaveAttribute('aria-live', 'polite');
   });
 
   it('동일 어종의 이미지 목록이 바뀌면 유효한 첫 사진으로 선택과 priority를 복구한다', async () => {
@@ -114,6 +116,7 @@ describe('FishMediaGallery', () => {
 
     expect(screen.getByRole('img', { name: secondaryMedia.alt })).toHaveAttribute('loading', 'lazy');
     expect(screen.getByRole('button', { name: '방어 이미지 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('2 / 2')).toBeVisible();
     attribution = screen.getByLabelText('사진 정보');
     expect(attribution).toHaveTextContent('사진: 보조 촬영자');
     expect(attribution).toHaveTextContent('라이선스: All rights reserved');

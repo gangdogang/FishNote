@@ -38,7 +38,7 @@ export default function FishCard({
   const isWide = variant === 'wide';
 
   return (
-    <article className="relative overflow-hidden rounded-card border border-line bg-surface shadow-none transition duration-150 hover:shadow-[0_8px_24px_rgba(26,43,51,0.08)]">
+    <article className="fish-card group/card relative isolate overflow-hidden rounded-[18px] border border-line/80 bg-surface">
       <Link
         to={fishDetailPath(fish)}
         state={{ sourceSection: analyticsSection }}
@@ -52,7 +52,7 @@ export default function FishCard({
       >
         <div
           className={[
-            'relative flex items-center justify-center bg-chipbg',
+            'fish-card-image relative flex items-center justify-center overflow-hidden bg-chipbg',
             isWide ? 'aspect-[5/2]' : 'aspect-[4/3]',
           ].join(' ')}
         >
@@ -67,13 +67,17 @@ export default function FishCard({
             )}
             className="h-full"
           />
+          <span
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#061c25]/20 to-transparent opacity-70"
+            aria-hidden
+          />
           {inSeasonNow ? <SeasonBadgeNow className="absolute left-2.5 top-2.5" /> : null}
         </div>
 
         <div className="p-3.5" data-fish-card-body>
           <div className="flex min-h-5 min-w-0 items-baseline justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-[16px] font-bold leading-tight text-ink">{fish.name}</h3>
+              <h3 className="truncate text-[16px] font-extrabold leading-tight tracking-[-0.015em] text-ink">{fish.name}</h3>
               {nameEn ? <span className="block truncate text-xs leading-snug text-ink-mute">{nameEn}</span> : null}
             </div>
             {shouldShowRating ? <RatingSummary avgRating={summary.avgRating} reviewCount={ratingCount ?? 0} /> : null}

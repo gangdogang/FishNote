@@ -81,8 +81,8 @@ export default function HomePage() {
     <div className="bg-mist pb-20">
       <HomeQuickNav />
 
-      <section id="home-hero" className="mx-auto max-w-content px-4 pt-5 sm:px-7">
-        <div className="relative rounded-2xl">
+      <section id="home-hero" className="home-hero-stage mx-auto max-w-content px-4 pt-5 sm:px-7">
+        <div className="home-hero-shell group relative isolate overflow-hidden rounded-[24px] bg-hero-surface">
           <img
             src="/hero/sea.jpg"
             srcSet="/hero/sea-960.jpg 960w, /hero/sea.jpg 1800w"
@@ -92,30 +92,37 @@ export default function HomePage() {
             alt=""
             aria-hidden
             decoding="async"
-            className="absolute inset-0 h-full w-full rounded-2xl object-cover"
+            className="home-hero-image absolute inset-0 -z-20 h-full w-full object-cover"
           />
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-[#0A2836]/60 via-[#0A2836]/45 to-[#0A2836]/75" aria-hidden />
-          <div className="relative px-3 py-5 text-center sm:px-8 sm:py-10">
-            <div className="mx-auto max-w-[680px] rounded-2xl bg-hero-surface px-4 py-7 shadow-[0_14px_36px_rgba(2,13,18,0.28)] sm:px-7 sm:py-9">
-              <h1 className="mb-2 text-balance text-title font-extrabold text-on-hero">
+          <div
+            className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_78%_16%,rgba(255,255,255,0.13),transparent_30%),linear-gradient(110deg,rgba(5,28,38,0.91)_0%,rgba(5,28,38,0.68)_48%,rgba(5,28,38,0.22)_78%,rgba(5,28,38,0.5)_100%)]"
+            aria-hidden
+          />
+          <div className="home-hero-frame relative flex min-h-[410px] items-end px-4 py-4 sm:min-h-[460px] sm:px-8 sm:py-8">
+            <div className="home-hero-panel w-full max-w-[650px] rounded-[20px] border border-white/15 bg-[#082934] px-5 py-6 text-left shadow-[0_18px_50px_rgba(2,13,18,0.24),inset_0_1px_rgba(255,255,255,0.08)] sm:px-7 sm:py-8">
+              <p className="mb-2 text-caption font-bold tracking-[0.12em] text-white/70">오늘의 회 도감</p>
+              <h1 className="home-hero-title mb-2 max-w-[560px] text-balance text-[2rem] font-extrabold leading-[1.16] tracking-[-0.035em] text-on-hero sm:text-[2.5rem]">
                 아는 만큼 맛있어지는 회
               </h1>
-              <p className="mb-5.5 text-body-sm text-on-hero">이름·제철·맛·가격대까지, 3초면 확인해요</p>
+              <p className="home-hero-copy mb-5.5 max-w-[520px] text-pretty text-body-sm text-white/[0.82] sm:text-[15px]">
+                이름·제철·맛·가격대까지, 고르기 전에 필요한 정보를 빠르게 확인해요
+              </p>
               <SearchBar
                 placeholder="횟감 이름이나 별칭을 입력해 보세요"
                 onSubmit={goSearch}
                 onSuggestionSelect={(fish) => navigate(fishDetailPath(fish))}
                 variant="default"
+                className="mx-0 max-w-full border-white/25 shadow-[0_12px_30px_rgba(2,13,18,0.18)]"
                 analyticsSurface="hero"
               />
-              <div className="mt-3.5 flex flex-wrap items-center justify-center gap-2 text-body-sm text-on-hero">
-                <span>바로 찾아보기</span>
+              <div className="home-quick-tags mt-3.5 flex flex-wrap items-center justify-start gap-2 text-body-sm text-on-hero">
+                <span className="home-quick-label w-full flex-none text-white/70 sm:mr-1 sm:w-auto">바로 찾아보기</span>
                 {popularTags.map((tag) => (
                   <button
                     key={tag}
                     type="button"
                     onClick={() => goSearch(tag)}
-                    className="inline-flex min-h-11 items-center rounded-full bg-on-hero px-3 py-2 text-body-sm font-semibold text-hero-surface transition hover:bg-on-hero/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-hero focus-visible:ring-offset-2 focus-visible:ring-offset-hero-surface"
+                    className="inline-flex min-h-11 flex-none items-center rounded-full border border-white/[0.18] bg-white/10 px-3 py-2 text-body-sm font-semibold text-white backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-hero-surface active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-hero focus-visible:ring-offset-2 focus-visible:ring-offset-hero-surface motion-reduce:transform-none motion-reduce:transition-none"
                   >
                     {tag}
                   </button>
@@ -126,7 +133,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="section-seasonal" className="mx-auto max-w-content scroll-mt-24 px-4 pt-8 sm:px-7">
+      <section id="section-seasonal" className="mx-auto max-w-content scroll-mt-[var(--app-scroll-offset)] px-4 pt-8 sm:px-7">
         <SectionHeader title={`${currentMonth}월, 지금이 제철이에요`}>
           <Link to="/calendar" className="text-body-sm font-semibold text-accent transition hover:text-accent-hover">
             제철 캘린더 →
@@ -149,7 +156,7 @@ export default function HomePage() {
         ) : null}
       </section>
 
-      <section id="section-featured" className="mx-auto max-w-content scroll-mt-24 px-4 pt-9 sm:px-7">
+      <section id="section-featured" className="mx-auto max-w-content scroll-mt-[var(--app-scroll-offset)] px-4 pt-9 sm:px-7">
         <SectionHeader title="처음 먹기 좋은 회" />
 
         {isFeaturedLoading ? <SkeletonCards count={2} layout="carousel" variant="wide" /> : null}
@@ -168,7 +175,7 @@ export default function HomePage() {
         ) : null}
       </section>
 
-      <section id="section-all" className="mx-auto max-w-content scroll-mt-24 px-4 pt-10 sm:px-7">
+      <section id="section-all" className="mx-auto max-w-content scroll-mt-[var(--app-scroll-offset)] px-4 pt-10 sm:px-7">
         <SectionHeader title="전체 도감" count={isLoading || isError ? undefined : `${fishes.length}종`} />
 
         <div className="mb-4.5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

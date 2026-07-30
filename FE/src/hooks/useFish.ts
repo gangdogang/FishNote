@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { getFishDetail, getFishList, getFishPrices, getHomeData } from '../api/fish';
+import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { getFishCatalogPage, getFishDetail, getFishList, getFishPrices, getHomeData } from '../api/fish';
 import { isValidResourceId, retryTransientQueryOnce } from '../lib/errors';
 import { isValidFishIdentifier } from '../lib/fishRoutes';
 import type { FishListParams } from '../types/fish';
@@ -13,6 +13,22 @@ export function useFishList(params: FishListParams = {}, options: FishListQueryO
     queryKey: ['fish', params],
     queryFn: () => getFishList(params),
     enabled: options.enabled ?? true,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useInfiniteFishList(params: FishListParams = {}) {
+  return useInfiniteQuery({
+    queryKey: ['fish', 'infinite', params],
+    queryFn: ({ pageParam }) => getFishCatalogPage(params, {
+      cursor: pageParam,
+      limit: 24,
+    }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => (
+      lastPage.pageInfo.hasNext ? lastPage.pageInfo.nextCursor ?? undefined : undefined
+    ),
+    placeholderData: keepPreviousData,
   });
 }
 

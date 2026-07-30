@@ -7,6 +7,10 @@ describe('SourcesPage', () => {
     render(<SourcesPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: '정보 출처' })).toBeInTheDocument();
+    const seasonMethod = screen.getByRole('heading', { name: '월별 제철을 정하는 법' }).parentElement;
+    expect(seasonMethod).toHaveTextContent('대표 제철 월을 등록');
+    expect(seasonMethod).toHaveTextContent('실시간으로 계산한 값은 아닙니다');
+    expect(seasonMethod).toHaveTextContent('양식·연중 공급 어종');
     expect(screen.getByRole('heading', { name: '검수 상태를 읽는 법' }).parentElement)
       .toHaveTextContent('검증 완료');
     expect(screen.getByRole('heading', { name: '검수 상태를 읽는 법' }).parentElement)

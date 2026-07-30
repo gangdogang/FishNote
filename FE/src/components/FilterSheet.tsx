@@ -1,6 +1,7 @@
 import { useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import type { SearchFilterValues } from '../types/search';
+import type { FishFacets } from '../types/fish';
 import FilterPanel from './FilterPanel';
 import ModalDialog from './ModalDialog';
 
@@ -10,6 +11,7 @@ interface FilterSheetProps {
   resultCount?: number;
   isResultLoading?: boolean;
   isResultError?: boolean;
+  facets?: FishFacets;
   onChange: (nextValue: SearchFilterValues) => void;
   onApply: () => void;
   onClose: () => void;
@@ -22,6 +24,7 @@ export default function FilterSheet({
   resultCount,
   isResultLoading = false,
   isResultError = false,
+  facets,
   onChange,
   onApply,
   onClose,
@@ -58,6 +61,7 @@ export default function FilterSheet({
         value={value}
         onChange={onChange}
         onReset={onReset}
+        facets={facets}
       />
 
       <div className="sticky bottom-0 -mx-4 mt-5 border-t border-line bg-surface px-4 pt-3">

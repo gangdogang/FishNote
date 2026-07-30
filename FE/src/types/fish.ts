@@ -36,6 +36,18 @@ export interface FishFacets {
   category: Record<string, number>;
 }
 
+export interface FishCatalogPageInfo {
+  nextCursor: string | null;
+  hasNext: boolean;
+  limit: number;
+}
+
+export interface FishCatalogPage {
+  items: FishSummary[];
+  pageInfo: FishCatalogPageInfo;
+  facets: FishFacets;
+}
+
 export interface HomeData {
   month: number;
   generatedAt: string;

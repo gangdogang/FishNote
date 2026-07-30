@@ -9,11 +9,12 @@ import FishCard from '../components/FishCard';
 import FishPlaceholder from '../components/FishPlaceholder';
 import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import SortSegment from '../components/SortSegment';
-import { useFishList } from '../hooks/useFish';
+import { useFishList, useInfiniteFishList } from '../hooks/useFish';
 import { SEASONS, TASTE_TAGS } from '../lib/filters';
 import { formatPriceLevel } from '../lib/format';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { trackAnalyticsEvent } from '../lib/analytics';
+import { mergeFishCatalogPages } from '../lib/catalogPagination';
 import type { FishListParams, FishSort, Season } from '../types/fish';
 import type { SearchFilterValues } from '../types/search';
 
@@ -37,7 +38,23 @@ export default function SearchPage() {
   const [draftSource, setDraftSource] = useState('');
   const lastTrackedResultsKey = useRef<string | null>(null);
   const effectiveDraftFilters = draftSource === searchParamsKey ? draftFilters : committedFilters;
-  const { data: fishes = [], isLoading, isError, refetch } = useFishList(params);
+  const {
+    data: catalogData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchNextPageError,
+    isFetching,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    refetch,
+  } = useInfiniteFishList(params);
+  const fishes = useMemo(
+    () => mergeFishCatalogPages(catalogData?.pages ?? []),
+    [catalogData],
+  );
+  const catalogFacets = catalogData?.pages[0]?.facets;
+  const isInitialError = isError && fishes.length === 0;
   const draftQueryParams = useMemo<FishListParams>(
     () => ({ search: params.search, sort: params.sort, ...effectiveDraftFilters }),
     [effectiveDraftFilters, params.search, params.sort],
@@ -60,14 +77,14 @@ export default function SearchPage() {
   }, [canonicalSearchParams, canonicalSearchParamsKey, searchParamsKey, setSearchParams]);
 
   useEffect(() => {
-    if (isLoading || isError || lastTrackedResultsKey.current === canonicalSearchParamsKey) return;
+    if (isLoading || isInitialError || lastTrackedResultsKey.current === canonicalSearchParamsKey) return;
     lastTrackedResultsKey.current = canonicalSearchParamsKey;
     trackAnalyticsEvent('search_results_viewed', {
       resultCount: fishes.length,
       zeroResult: fishes.length === 0,
       filterCount: activeFilterCount,
     });
-  }, [activeFilterCount, canonicalSearchParamsKey, fishes.length, isError, isLoading]);
+  }, [activeFilterCount, canonicalSearchParamsKey, fishes.length, isInitialError, isLoading]);
 
   function update(next: Record<string, string | number | undefined>) {
     const merged = new URLSearchParams(canonicalSearchParams);
@@ -130,7 +147,13 @@ export default function SearchPage() {
       <h1 className="mb-4 text-2xl font-bold tracking-[-0.025em] text-ink">검색</h1>
 
       <div className="mb-3 flex min-h-11 min-w-0 items-center justify-between gap-3 lg:hidden">
-        <ResultCount params={params} count={fishes.length} loading={isLoading} error={isError} />
+        <ResultCount
+          params={params}
+          count={fishes.length}
+          hasMore={Boolean(hasNextPage)}
+          loading={isLoading}
+          error={isInitialError}
+        />
         <button
           type="button"
           onClick={openFilterSheet}
@@ -162,13 +185,20 @@ export default function SearchPage() {
             value={committedFilters}
             onChange={commitFilters}
             onReset={() => commitFilters({})}
+            facets={catalogFacets}
           />
         </aside>
 
         <section className="min-w-0">
           <div className="mb-3 flex justify-end lg:items-center lg:justify-between">
             <div className="hidden lg:block">
-              <ResultCount params={params} count={fishes.length} loading={isLoading} error={isError} />
+              <ResultCount
+                params={params}
+                count={fishes.length}
+                hasMore={Boolean(hasNextPage)}
+                loading={isLoading}
+                error={isInitialError}
+              />
             </div>
             <SortSegment value={params.sort} onChange={(sort) => update({ sort })} />
           </div>
@@ -182,15 +212,58 @@ export default function SearchPage() {
           {isLoading ? (
             <SkeletonCards count={4} className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]" />
           ) : null}
-          {isError ? <ErrorState onRetry={() => void refetch()} /> : null}
-          {!isLoading && !isError && fishes.length === 0 ? (
+          {isInitialError ? <ErrorState onRetry={() => void refetch()} /> : null}
+          {isError && !isInitialError && !isFetchNextPageError ? (
+            <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-btn bg-accent-soft/45 px-3.5 py-2.5">
+              <p className="m-0 text-body-sm text-ink-mute">최신 검색 결과를 불러오지 못해 이전 내용을 보여드려요.</p>
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                className="inline-flex min-h-11 items-center rounded-btn px-2 text-body-sm font-bold text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:cursor-wait disabled:opacity-60"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : null}
+          {isFetching && !isFetchingNextPage && fishes.length > 0 ? (
+            <p role="status" aria-live="polite" className="m-0 mb-3 text-body-sm text-ink-mute">
+              검색 결과를 업데이트하는 중...
+            </p>
+          ) : null}
+          {!isLoading && !isInitialError && fishes.length === 0 ? (
             <EmptyState onReset={resetAll} onExample={(name) => setSearchParams(new URLSearchParams({ search: name }))} />
           ) : null}
-          {!isLoading && !isError && fishes.length > 0 ? (
-            <div className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]">
-              {fishes.map((fish, index) => (
-                <FishCard key={fish.id} fish={fish} analyticsSection="search_results" analyticsPosition={index + 1} sort={params.sort} />
-              ))}
+          {!isInitialError && fishes.length > 0 ? (
+            <div aria-busy={isFetching}>
+              <div className="grid gap-5 [grid-template-columns:repeat(auto-fill,minmax(232px,1fr))]">
+                {fishes.map((fish, index) => (
+                  <FishCard key={fish.id} fish={fish} analyticsSection="search_results" analyticsPosition={index + 1} sort={params.sort} />
+                ))}
+              </div>
+
+              {hasNextPage || isFetchNextPageError ? (
+                <div className="mt-5">
+                  {isFetchNextPageError ? (
+                    <p role="alert" className="m-0 mb-2 text-center text-body-sm text-red-700 dark:text-red-400">
+                      다음 검색 결과를 불러오지 못했어요.
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => void fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    aria-busy={isFetchingNextPage}
+                    className="inline-flex min-h-12 w-full items-center justify-center rounded-btn border border-line bg-surface px-5 py-3 text-body-sm font-bold text-ink transition hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-wait disabled:text-ink-mute"
+                  >
+                    {isFetchingNextPage
+                      ? '검색 결과를 더 불러오는 중...'
+                      : isFetchNextPageError
+                        ? '더 보기 다시 시도'
+                        : '검색 결과 더 보기'}
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>
@@ -202,11 +275,13 @@ export default function SearchPage() {
 function ResultCount({
   params,
   count,
+  hasMore,
   loading,
   error,
 }: {
   params: SearchViewParams;
   count: number;
+  hasMore: boolean;
   loading: boolean;
   error: boolean;
 }) {
@@ -217,7 +292,10 @@ function ResultCount({
       {error ? (
         '검색 결과를 불러오지 못했어요'
       ) : (
-        <>검색 결과 <b className="font-bold text-ink">{loading ? '-' : count}</b>건</>
+        <>
+          검색 결과 <b className="font-bold text-ink">{loading ? '-' : count}</b>
+          {!loading && hasMore ? '건 이상' : '건'}
+        </>
       )}
     </span>
   );

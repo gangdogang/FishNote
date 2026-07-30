@@ -25,7 +25,7 @@ export default function SourceSection({
     <section
       id="fish-source-section"
       aria-labelledby="fish-source-heading"
-      className="mt-11 scroll-mt-24"
+      className="mt-11 scroll-mt-[var(--detail-scroll-offset)]"
     >
       <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
         <h2 id="fish-source-heading" className="m-0 text-19 font-extrabold tracking-normal text-ink">

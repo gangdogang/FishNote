@@ -3,19 +3,20 @@ import { SEASONS, TASTE_TAGS } from '../lib/filters';
 import { formatPriceLevel } from '../lib/format';
 import { chipClass } from '../lib/uiClasses';
 import type { SearchFilterValues } from '../types/search';
-import type { Season } from '../types/fish';
+import type { FishFacets, Season } from '../types/fish';
 
 interface FilterPanelProps {
   value: SearchFilterValues;
   onChange: (nextValue: SearchFilterValues) => void;
   onReset: () => void;
   idPrefix?: string;
+  facets?: FishFacets;
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 const PRICE_LEVELS = [1, 2, 3] as const;
 
-export default function FilterPanel({ value, onChange, onReset, idPrefix }: FilterPanelProps) {
+export default function FilterPanel({ value, onChange, onReset, idPrefix, facets }: FilterPanelProps) {
   const generatedId = useId().replace(/:/g, '');
   const prefix = idPrefix?.trim() || `search-filter-${generatedId}`;
 
@@ -84,6 +85,7 @@ export default function FilterPanel({ value, onChange, onReset, idPrefix }: Filt
             id={`${prefix}-month-${month}`}
             active={value.month === month}
             onClick={() => changeMonth(month)}
+            count={facets?.season[String(month)]}
           >
             {month}월
           </FilterChip>
@@ -97,6 +99,7 @@ export default function FilterPanel({ value, onChange, onReset, idPrefix }: Filt
             id={`${prefix}-taste-${taste}`}
             active={value.taste === taste}
             onClick={() => changeTaste(taste)}
+            count={facets?.taste[taste]}
           >
             {taste}
           </FilterChip>
@@ -110,6 +113,7 @@ export default function FilterPanel({ value, onChange, onReset, idPrefix }: Filt
             id={`${prefix}-price-${priceLevel}`}
             active={value.priceLevel === priceLevel}
             onClick={() => changePriceLevel(priceLevel)}
+            count={facets?.priceLevel[String(priceLevel)]}
           >
             {formatPriceLevel(priceLevel, { withLabel: true })}
           </FilterChip>
@@ -140,12 +144,18 @@ interface FilterChipProps {
   active: boolean;
   onClick: () => void;
   children: ReactNode;
+  count?: number;
 }
 
-function FilterChip({ id, active, onClick, children }: FilterChipProps) {
+function FilterChip({ id, active, onClick, children, count }: FilterChipProps) {
   return (
     <button id={id} type="button" aria-pressed={active} onClick={onClick} className={chipClass(active)}>
       {children}
+      {typeof count === 'number' ? (
+        <span aria-hidden className={active ? 'ml-1 opacity-80' : 'ml-1 text-ink-mute'}>
+          {count}
+        </span>
+      ) : null}
     </button>
   );
 }

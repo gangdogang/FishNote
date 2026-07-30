@@ -83,6 +83,7 @@ describe('CalendarPage month rail', () => {
 
     for (const button of buttons) {
       expect(button).toHaveClass(
+        'calendar-month-button',
         'h-[58px]',
         'min-h-11',
         'w-[74px]',
@@ -97,4 +98,15 @@ describe('CalendarPage month rail', () => {
       );
     }
   });
+
+  it('제철 표시 기준과 검수 방식으로 이동하는 링크를 제공한다', () => {
+    renderCalendar();
+
+    const note = screen.getByRole('complementary', { name: '제철 표시 기준' });
+    expect(note).toHaveTextContent('자연산 중심의 대표 월');
+    expect(note).toHaveTextContent('양식·수입종은 연중');
+    expect(within(note).getByRole('link', { name: '근거와 검수 방식 보기 →' }))
+      .toHaveAttribute('href', '/sources');
+  });
+
 });

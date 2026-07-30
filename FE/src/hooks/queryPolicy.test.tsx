@@ -8,6 +8,7 @@ import { useReviews } from './useReviews';
 import { clearStoredAccessToken, setStoredAccessToken } from '../api/client';
 
 const fishApiMocks = vi.hoisted(() => ({
+  getFishCatalogPage: vi.fn(),
   getFishDetail: vi.fn(),
   getFishList: vi.fn(),
   getFishPrices: vi.fn(),

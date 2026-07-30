@@ -25,6 +25,12 @@
   --c-star: 155 98 0; /* mist 대비 4.76:1, surface 대비 5.07:1 */
   --c-surface: 255 255 255; /* 카드·헤더 배경 */
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --app-header-height: 65px;
+  --app-scroll-offset: 84px;
+  --detail-scroll-offset: 128px;
+  --motion-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-spring: cubic-bezier(0.2, 0.85, 0.25, 1.15);
+  --c-shadow: 10 40 54;
 
   color: rgb(var(--c-ink));
   background: rgb(var(--c-mist));
@@ -53,6 +59,7 @@
   --c-chipbg: 30 42 48;
   --c-star: 232 178 76;
   --c-surface: 23 33 38; /* 카드·헤더 배경 */
+  --c-shadow: 0 0 0;
 
   color-scheme: dark;
 }
@@ -75,9 +82,239 @@ select {
   font: inherit;
 }
 
+.detail-section-nav-scroll {
+  scrollbar-width: none;
+}
+
+.detail-section-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.home-hero-shell {
+  box-shadow:
+    0 1px 2px rgb(var(--c-shadow) / 0.08),
+    0 24px 64px rgb(var(--c-shadow) / 0.18);
+}
+
+.home-hero-image {
+  animation: home-hero-image-reveal 900ms var(--motion-standard) both;
+  transition: transform 900ms var(--motion-standard);
+}
+
+.fish-card {
+  box-shadow:
+    0 1px 2px rgb(var(--c-shadow) / 0.04),
+    0 10px 30px rgb(var(--c-shadow) / 0.055);
+  transition:
+    transform 320ms var(--motion-standard),
+    border-color 240ms ease,
+    box-shadow 320ms var(--motion-standard);
+}
+
+.fish-card::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.32);
+  content: "";
+  pointer-events: none;
+  z-index: 2;
+}
+
+.dark .fish-card::after {
+  box-shadow: inset 0 1px rgb(255 255 255 / 0.06);
+}
+
+.fish-card-image img {
+  transition:
+    transform 620ms var(--motion-standard),
+    filter 320ms ease;
+}
+
+.calendar-month-button {
+  scroll-snap-align: center;
+  transition:
+    transform 260ms var(--motion-spring),
+    border-color 200ms ease,
+    background-color 200ms ease,
+    color 200ms ease,
+    box-shadow 260ms var(--motion-standard);
+}
+
+.calendar-month-button[aria-pressed="true"] {
+  box-shadow:
+    0 1px 2px rgb(var(--c-shadow) / 0.08),
+    0 10px 24px rgb(var(--c-accent) / 0.2);
+  transform: translateY(-2px) scale(1.025);
+}
+
+.season-results-enter {
+  animation: season-results-enter 420ms var(--motion-standard) both;
+}
+
+.fish-gallery-stage {
+  box-shadow:
+    0 1px 2px rgb(var(--c-shadow) / 0.08),
+    0 18px 48px rgb(var(--c-shadow) / 0.12);
+}
+
+.fish-gallery-image {
+  animation: fish-gallery-image-reveal 560ms var(--motion-standard) both;
+}
+
+.fish-gallery-image img {
+  transition: transform 800ms var(--motion-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-hero-shell:hover .home-hero-image {
+    transform: scale(1.018);
+  }
+
+  .fish-card:hover,
+  .fish-card:focus-within {
+    border-color: rgb(var(--c-accent) / 0.24);
+    box-shadow:
+      0 2px 4px rgb(var(--c-shadow) / 0.05),
+      0 18px 42px rgb(var(--c-shadow) / 0.13);
+    transform: translateY(-4px);
+  }
+
+  .fish-card:hover .fish-card-image img,
+  .fish-card:focus-within .fish-card-image img {
+    filter: saturate(1.035) contrast(1.015);
+    transform: scale(1.04);
+  }
+
+  .fish-gallery-stage:hover .fish-gallery-image img {
+    transform: scale(1.018);
+  }
+}
+
+@keyframes home-hero-image-reveal {
+  from {
+    opacity: 0.72;
+    transform: scale(1.055);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes home-hero-content-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes season-results-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fish-gallery-image-reveal {
+  from {
+    clip-path: inset(4% 2% 4% 2% round 16px);
+    transform: scale(1.025);
+  }
+
+  to {
+    clip-path: inset(0 round 16px);
+    transform: scale(1);
+  }
+}
+
 /* 다크모드에서 focus ring offset이 흰색 테두리로 보이지 않도록 배경색과 맞춤 */
 .dark *,
 .dark ::before,
 .dark ::after {
   --tw-ring-offset-color: rgb(var(--c-mist));
+}
+
+@media (max-width: 767px) {
+  :root {
+    /* 첫 행 65px + 검색 행 52px. 상세 sticky nav와 anchor도 같은 기준을 공유한다. */
+    --app-header-height: 117px;
+    --app-scroll-offset: 132px;
+    --detail-scroll-offset: 178px;
+  }
+}
+
+@media (max-width: 359px), (max-width: 767px) and (max-height: 700px) {
+  .home-hero-stage {
+    padding-top: 1rem;
+  }
+
+  .home-hero-frame {
+    min-height: 0;
+    padding-block: 1rem;
+  }
+
+  .home-hero-panel {
+    padding-block: 1.25rem;
+  }
+
+  .home-hero-title {
+    font-size: 1.5rem;
+    line-height: 1.25;
+  }
+
+  .home-hero-copy {
+    margin-bottom: 1rem;
+  }
+
+  .home-quick-tags {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .home-quick-tags::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-quick-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .home-hero-image,
+  .home-hero-panel,
+  .fish-card,
+  .fish-card-image img,
+  .calendar-month-button,
+  .season-results-enter,
+  .fish-gallery-image,
+  .fish-gallery-image img {
+    animation: none;
+    transition: none;
+  }
+
+  .calendar-month-button[aria-pressed="true"],
+  .fish-card:hover,
+  .fish-card:focus-within {
+    transform: none;
+  }
 }

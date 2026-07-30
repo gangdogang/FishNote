@@ -121,7 +121,7 @@ describe('BookmarkMergeDialog', () => {
 
     clearBookmarkMergeDismissed();
     await user.click(opener);
-    await user.click(screen.getByRole('button', { name: '나중에' }));
+    await user.click(screen.getByRole('button', { name: '이번에는 건너뛰기' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(window.localStorage.getItem(BOOKMARK_MERGE_DISMISSED_KEY)).toBe('true');
     await waitFor(() => expect(opener).toHaveFocus());
@@ -141,7 +141,7 @@ describe('BookmarkMergeDialog', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: '옮기는 중...' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '나중에' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '이번에는 건너뛰기' })).toBeDisabled();
     expect(bookmarkApiMocks.mergeMyBookmarks.mock.calls[0]?.[0]).toEqual([2, 7]);
 
     await user.keyboard('{Escape}');
@@ -172,7 +172,7 @@ describe('BookmarkMergeDialog', () => {
     );
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '옮기기' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '나중에' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '이번에는 건너뛰기' })).toBeEnabled();
     expect(window.localStorage.getItem(BOOKMARK_STORAGE_KEY)).toBe('[5]');
     expect(invalidateQueries).not.toHaveBeenCalled();
   });

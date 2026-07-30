@@ -19,7 +19,11 @@ export default function FishTasteSection({
 }: FishTasteSectionProps) {
   return (
     <>
-      <section className="mt-11" aria-labelledby="fish-taste-heading">
+      <section
+        id="taste-section"
+        className="mt-11 scroll-mt-[var(--detail-scroll-offset)]"
+        aria-labelledby="fish-taste-heading"
+      >
         <h2 id="fish-taste-heading" className="m-0 mb-3.5 text-19 font-extrabold tracking-normal text-ink">
           어떤 맛인가요?
         </h2>
