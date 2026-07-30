@@ -74,7 +74,7 @@ export default function FishCard({
           {inSeasonNow ? <SeasonBadgeNow className="absolute left-2.5 top-2.5" /> : null}
         </div>
 
-        <div className="p-4" data-fish-card-body>
+        <div className="p-3.5" data-fish-card-body>
           <div className="flex min-h-5 min-w-0 items-baseline justify-between gap-2">
             <div className="min-w-0">
               <h3 className="truncate text-[16px] font-extrabold leading-tight tracking-[-0.015em] text-ink">{fish.name}</h3>

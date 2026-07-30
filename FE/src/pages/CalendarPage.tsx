@@ -67,7 +67,7 @@ export default function CalendarPage() {
         </div>
       </aside>
 
-      <div className="-mx-4 mb-8 snap-x snap-mandatory overflow-x-auto scroll-smooth px-4 pb-2 pt-1 [scrollbar-width:none] sm:-mx-7 sm:px-7 lg:mx-0 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden motion-reduce:scroll-auto">
+      <div className="-mx-4 mb-8 snap-x snap-mandatory overflow-x-auto px-4 pb-2 pt-1 [scrollbar-width:none] sm:-mx-7 sm:px-7 lg:mx-0 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden">
         <div
           className="flex min-w-max gap-2 lg:grid lg:min-w-0 lg:grid-cols-12 lg:gap-1.75"
           role="group"

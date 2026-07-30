@@ -99,7 +99,7 @@ export default function HomePage() {
             aria-hidden
           />
           <div className="home-hero-frame relative flex min-h-[410px] items-end px-4 py-4 sm:min-h-[460px] sm:px-8 sm:py-8">
-            <div className="home-hero-panel w-full max-w-[650px] rounded-[20px] border border-white/15 bg-[#082934]/75 px-5 py-6 text-left shadow-[0_18px_50px_rgba(2,13,18,0.24),inset_0_1px_rgba(255,255,255,0.08)] backdrop-blur-[16px] sm:px-7 sm:py-8">
+            <div className="home-hero-panel w-full max-w-[650px] rounded-[20px] border border-white/15 bg-[#082934] px-5 py-6 text-left shadow-[0_18px_50px_rgba(2,13,18,0.24),inset_0_1px_rgba(255,255,255,0.08)] sm:px-7 sm:py-8">
               <p className="mb-2 text-caption font-bold tracking-[0.12em] text-white/70">오늘의 회 도감</p>
               <h1 className="home-hero-title mb-2 max-w-[560px] text-balance text-[2rem] font-extrabold leading-[1.16] tracking-[-0.035em] text-on-hero sm:text-[2.5rem]">
                 아는 만큼 맛있어지는 회
