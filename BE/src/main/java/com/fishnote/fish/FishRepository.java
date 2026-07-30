@@ -1,5 +1,6 @@
 package com.fishnote.fish;
 
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -16,4 +17,10 @@ public interface FishRepository extends JpaRepository<Fish, Long>, JpaSpecificat
     Optional<Fish> findDetailBySlug(@Param("slug") String slug);
 
     Optional<Fish> findByName(String name);
+
+    List<Fish> findAllByOrderByNameAsc();
+
+    boolean existsByNameAndIdNot(String name, Long id);
+
+    boolean existsBySlugAndIdNot(String slug, Long id);
 }

@@ -212,6 +212,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       >
                         계정 관리
                       </Link>
+                      {user.role === 'ADMIN' ? (
+                        <Link
+                          to="/admin"
+                          onClick={() => setProfileOpen(false)}
+                          className="block px-3.5 py-2 text-body-sm font-semibold text-accent transition hover:bg-mist focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+                        >
+                          관리자
+                        </Link>
+                      ) : null}
                       <button
                         type="button"
                         onClick={handleLogout}

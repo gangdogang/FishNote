@@ -143,6 +143,13 @@ public class ReviewService {
         deleteReviewRecord(review);
     }
 
+    @Transactional
+    public void deleteReviewForModeration(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NotFoundException("후기를 찾을 수 없습니다."));
+        deleteReviewRecord(review);
+    }
+
     private void deleteReviewRecord(Review review) {
         Long fishId = review.getFish().getId();
         String fishSlug = review.getFish().getSlug();

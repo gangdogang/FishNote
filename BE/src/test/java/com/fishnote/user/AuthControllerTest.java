@@ -74,7 +74,8 @@ class AuthControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.email", is("user@example.com")))
-                .andExpect(jsonPath("$.nickname", is("회러버")));
+                .andExpect(jsonPath("$.nickname", is("회러버")))
+                .andExpect(jsonPath("$.role", is("USER")));
 
         String loginResponse = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

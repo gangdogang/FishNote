@@ -17,6 +17,7 @@ const AccountPage = lazy(() => import('./pages/AccountPage'));
 const SourcesPage = lazy(() => import('./pages/SourcesPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function RouteFallback() {
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="/sources" element={<SourcesPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
+            <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

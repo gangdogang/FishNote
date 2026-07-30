@@ -80,4 +80,12 @@ public class FishCorrectionRequest {
         this.message = message;
         this.sourceUrl = sourceUrl;
     }
+
+    public void updateStatus(CorrectionRequestStatus nextStatus, OffsetDateTime changedAt) {
+        if (nextStatus == null || changedAt == null) {
+            throw new IllegalArgumentException("처리 상태와 변경 시각은 필수입니다.");
+        }
+        this.status = nextStatus;
+        this.resolvedAt = nextStatus == CorrectionRequestStatus.PENDING ? null : changedAt;
+    }
 }

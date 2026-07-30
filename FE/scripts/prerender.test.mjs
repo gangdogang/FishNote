@@ -60,4 +60,5 @@ test('private SPA shell is noindex and reserved analytics path bypasses fallback
   assert.match(shell, /<meta name="robots" content="noindex, nofollow" \/>/);
   assert.ok(vercel.rewrites.some((rewrite) => rewrite.source.includes('(?!_vercel/)')));
   assert.ok(vercel.rewrites.some((rewrite) => rewrite.source === '/search' && rewrite.destination === '/spa-noindex.html'));
+  assert.ok(vercel.rewrites.some((rewrite) => rewrite.source === '/admin' && rewrite.destination === '/spa-noindex.html'));
 });

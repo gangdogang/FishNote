@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fishnote.security.JwtTokenProvider;
+import com.fishnote.user.User;
+import com.fishnote.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -28,6 +30,9 @@ class RateLimitSecurityIntegrationTest {
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Test
     void anonymousHeadSuggestionsIsPublicAndCorsAllowed() throws Exception {
@@ -73,27 +78,35 @@ class RateLimitSecurityIntegrationTest {
 
     @Test
     void jwtAuthenticatedRequestsShareAUserBucketAcrossRemoteAddressChanges() throws Exception {
-        String token = jwtTokenProvider.createToken(42L);
+        User user = new User();
+        user.setNickname("레이트리밋 테스트");
+        User savedUser = userRepository.saveAndFlush(user);
 
-        for (int index = 0; index < 10; index++) {
-            String remoteAddress = "198.51.100." + index;
+        try {
+            String token = jwtTokenProvider.createToken(savedUser.getId());
+
+            for (int index = 0; index < 10; index++) {
+                String remoteAddress = "198.51.100." + index;
+                mockMvc.perform(delete("/api/v1/reviews/not-a-number")
+                                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                                .with(request -> {
+                                    request.setRemoteAddr(remoteAddress);
+                                    return request;
+                                }))
+                        .andExpect(status().isBadRequest());
+            }
+
             mockMvc.perform(delete("/api/v1/reviews/not-a-number")
                             .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                             .with(request -> {
-                                request.setRemoteAddr(remoteAddress);
+                                request.setRemoteAddr("203.0.113.99");
                                 return request;
                             }))
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isTooManyRequests())
+                    .andExpect(jsonPath("$.code").value(RateLimitFilter.ERROR_CODE));
+        } finally {
+            userRepository.deleteById(savedUser.getId());
         }
-
-        mockMvc.perform(delete("/api/v1/reviews/not-a-number")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                        .with(request -> {
-                            request.setRemoteAddr("203.0.113.99");
-                            return request;
-                        }))
-                .andExpect(status().isTooManyRequests())
-                .andExpect(jsonPath("$.code").value(RateLimitFilter.ERROR_CODE));
     }
 
     @Test

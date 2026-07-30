@@ -20,6 +20,7 @@
     { "source": "/login", "destination": "/spa-noindex.html" },
     { "source": "/signup", "destination": "/spa-noindex.html" },
     { "source": "/account", "destination": "/spa-noindex.html" },
+    { "source": "/admin", "destination": "/spa-noindex.html" },
     { "source": "/auth/kakao/callback", "destination": "/spa-noindex.html" },
     {
       "source": "/((?!_vercel/).*)",
