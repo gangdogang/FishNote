@@ -53,7 +53,8 @@ export default function FishMediaGallery({ fish, className = '' }: FishMediaGall
         {!showCompactPlaceholder && displayedImages.length > 1 ? (
           <span
             aria-live="polite"
-            className="absolute right-3 top-3 rounded-full border border-white/20 bg-[#061c25] px-2.5 py-1 text-caption font-bold tabular-nums text-white shadow-sm"
+            className="absolute right-3 top-3 z-10 rounded-full border border-white/20 px-2.5 py-1 text-caption font-bold tabular-nums shadow-sm"
+            style={{ backgroundColor: '#061c25', color: '#ffffff' }}
           >
             {effectiveImageIndex + 1} / {displayedImages.length}
           </span>

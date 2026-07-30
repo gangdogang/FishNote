@@ -101,10 +101,6 @@ select {
   transition: transform 900ms var(--motion-standard);
 }
 
-.home-hero-panel {
-  animation: home-hero-content-reveal 620ms 120ms var(--motion-standard) both;
-}
-
 .fish-card {
   box-shadow:
     0 1px 2px rgb(var(--c-shadow) / 0.04),
@@ -234,13 +230,11 @@ select {
 @keyframes fish-gallery-image-reveal {
   from {
     clip-path: inset(4% 2% 4% 2% round 16px);
-    opacity: 0.4;
     transform: scale(1.025);
   }
 
   to {
     clip-path: inset(0 round 16px);
-    opacity: 1;
     transform: scale(1);
   }
 }

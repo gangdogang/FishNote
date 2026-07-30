@@ -241,7 +241,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           {showHeaderSearch ? (
-            <div className="mt-2 w-full md:hidden">
+            <div
+              className={[
+                'w-full md:hidden',
+                normalizedPathname === '/'
+                  ? 'absolute inset-x-0 top-full border-b border-line bg-surface px-4 pb-2.5 pt-2 sm:px-7'
+                  : 'mt-2',
+              ].join(' ')}
+            >
               <SearchBar
                 key={`mobile-${location.search}`}
                 initialValue={searchParams.get('search') ?? ''}
