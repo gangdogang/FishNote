@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from './client';
-import { getFishDetail, getFishList, getHomeData } from './fish';
+import { getFishCatalogPage, getFishDetail, getFishList, getHomeData } from './fish';
 import type { FishDetail, FishSummary } from '../types/fish';
 
 const summary = {
@@ -35,6 +35,24 @@ describe('fish v2 read with v1 rollback', () => {
     expect(get).toHaveBeenCalledWith(
       expect.stringMatching(/\/api\/v2\/fish$/),
       { params: { sort: 'popular', limit: 100 } },
+    );
+  });
+
+  it('preserves v2 pageInfo and sends the cursor when loading more catalog results', async () => {
+    const page = {
+      items: [summary],
+      pageInfo: { nextCursor: 'cursor-2', hasNext: true, limit: 24 },
+      facets: { taste: { '담백': 1 }, season: {}, priceLevel: {}, category: {} },
+    };
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValueOnce({ data: page });
+
+    await expect(getFishCatalogPage(
+      { search: '광어', sort: 'popular' },
+      { cursor: 'cursor-1', limit: 24 },
+    )).resolves.toEqual(page);
+    expect(get).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/v2\/fish$/),
+      { params: { search: '광어', sort: 'popular', limit: 24, cursor: 'cursor-1' } },
     );
   });
 

@@ -36,6 +36,7 @@ vi.mock('../hooks/useReviews', () => ({
 vi.mock('../hooks/useBookmarks', () => ({
   useBookmarks: () => ({
     isBookmarked: hookMocks.isBookmarked,
+    isBookmarkPending: () => false,
     toggleBookmark: hookMocks.toggleBookmark,
   }),
 }));

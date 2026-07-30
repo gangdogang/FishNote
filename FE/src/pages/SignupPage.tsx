@@ -2,6 +2,7 @@ import { FormEvent, useState, type ReactNode } from 'react';
 import { Fish } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { Field } from '../components/FormField';
+import PasswordInput from '../components/PasswordInput';
 import { inputClass } from '../lib/uiClasses';
 import { useAuth } from '../hooks/useAuth';
 import { getAuthRedirectPath, getAuthSwitchState } from '../lib/authRedirect';
@@ -12,6 +13,7 @@ interface SignupFormState {
   email: string;
   nickname: string;
   password: string;
+  confirmPassword: string;
 }
 
 type SignupFieldErrors = Partial<Record<keyof SignupFormState, string>>;
@@ -20,9 +22,10 @@ const emptyForm: SignupFormState = {
   email: '',
   nickname: '',
   password: '',
+  confirmPassword: '',
 };
 
-const SIGNUP_FIELD_ORDER: ReadonlyArray<keyof SignupFormState> = ['email', 'nickname', 'password'];
+const SIGNUP_FIELD_ORDER: ReadonlyArray<keyof SignupFormState> = ['email', 'nickname', 'password', 'confirmPassword'];
 
 export default function SignupPage() {
   usePageMeta('회원가입', undefined, null, { noindex: true });
@@ -119,10 +122,9 @@ export default function SignupPage() {
         </Field>
 
         <Field label="비밀번호" htmlFor="signup-password" error={fieldErrors.password} helper="8자 이상이면 돼요">
-          <input
+          <PasswordInput
             id="signup-password"
             name="password"
-            type="password"
             autoComplete="new-password"
             minLength={8}
             maxLength={64}
@@ -131,6 +133,25 @@ export default function SignupPage() {
             placeholder="비밀번호"
             onChange={(event) => updateField('password', event.target.value)}
             className={inputClass(Boolean(fieldErrors.password))}
+          />
+        </Field>
+
+        <Field
+          label="비밀번호 확인"
+          htmlFor="signup-confirm-password"
+          error={fieldErrors.confirmPassword}
+        >
+          <PasswordInput
+            id="signup-confirm-password"
+            name="confirmPassword"
+            autoComplete="new-password"
+            minLength={8}
+            maxLength={64}
+            value={form.confirmPassword}
+            disabled={submitting}
+            placeholder="비밀번호를 한 번 더 입력"
+            onChange={(event) => updateField('confirmPassword', event.target.value)}
+            className={inputClass(Boolean(fieldErrors.confirmPassword))}
           />
         </Field>
 
@@ -189,6 +210,8 @@ function validateSignupForm(form: SignupFormState) {
   else if (nickname.length > 30) errors.nickname = '닉네임은 30자 이하로 입력해 주세요.';
   if (form.password.length < 8) errors.password = '비밀번호는 8자 이상으로 입력해 주세요.';
   else if (form.password.length > 64) errors.password = '비밀번호는 64자 이하로 입력해 주세요.';
+  if (!form.confirmPassword) errors.confirmPassword = '비밀번호를 한 번 더 입력해 주세요.';
+  else if (form.password !== form.confirmPassword) errors.confirmPassword = '비밀번호가 서로 달라요.';
 
   return errors;
 }

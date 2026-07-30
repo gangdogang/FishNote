@@ -23,7 +23,7 @@ export default function VerificationSummary({
         role="status"
         aria-label="검증 정보를 불러오는 중"
         aria-busy="true"
-        className="mt-5 flex min-h-16 animate-pulse items-center rounded-card border border-line bg-surface px-4 motion-reduce:animate-none"
+        className="mt-3 flex min-h-12 animate-pulse items-center rounded-btn bg-accent-soft/45 px-3.5 motion-reduce:animate-none"
       >
         <span className="h-4 w-56 rounded bg-chipbg" aria-hidden />
       </div>
@@ -32,7 +32,7 @@ export default function VerificationSummary({
 
   if (error && !summary) {
     return (
-      <div role="alert" className="mt-5 flex flex-wrap items-center gap-3 rounded-card border border-line bg-surface px-4 py-3">
+      <div role="alert" className="mt-3 flex flex-wrap items-center gap-3 rounded-btn bg-accent-soft/40 px-3.5 py-2.5">
         <ShieldAlert className="h-5 w-5 flex-none text-ink-mute" aria-hidden />
         <p className="m-0 min-w-0 flex-1 text-body-sm text-ink-mute">
           검증 요약은 불러오지 못했지만 상세 정보는 계속 볼 수 있어요.
@@ -53,7 +53,7 @@ export default function VerificationSummary({
   return (
     <aside
       aria-label="정보 검증 요약"
-      className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-card border border-line bg-surface px-4 py-3"
+      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-btn bg-accent-soft/45 px-3.5 py-2.5"
     >
       <StatusIcon status={summary.verificationStatus} />
       <div className="min-w-0 flex-1">

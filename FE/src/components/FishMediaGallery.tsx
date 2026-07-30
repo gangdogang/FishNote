@@ -34,21 +34,30 @@ export default function FishMediaGallery({ fish, className = '' }: FishMediaGall
     >
       <div
         className={[
-          'relative flex min-w-0 w-full max-w-full items-center justify-center overflow-hidden rounded-2xl bg-chipbg transition-[height,max-width] motion-reduce:transition-none',
+          'fish-gallery-stage relative flex min-w-0 w-full max-w-full items-center justify-center overflow-hidden rounded-[22px] bg-chipbg transition-[height,max-width] motion-reduce:transition-none',
           showCompactPlaceholder
             ? 'h-36 max-w-[420px] sm:h-44'
             : 'aspect-[4/3] max-h-[420px]',
         ].join(' ')}
       >
         <SmartImage
+          key={selectedImage?.key ?? 'placeholder'}
           media={selectedImage?.media}
           legacyUrl={selectedImage?.legacyUrl}
           fallbackName={fish.name}
           priority={effectiveImageIndex === 0 && selectedImage !== null}
           sizes="(max-width: 1023px) calc(100vw - 32px), 480px"
-          className="h-full rounded-2xl"
+          className="fish-gallery-image h-full rounded-[22px]"
           onLoadError={() => setFailedImageKey(selectedImage?.key ?? null)}
         />
+        {!showCompactPlaceholder && displayedImages.length > 1 ? (
+          <span
+            aria-live="polite"
+            className="absolute right-3 top-3 rounded-full border border-white/20 bg-[#061c25]/[0.55] px-2.5 py-1 text-caption font-bold tabular-nums text-white shadow-sm backdrop-blur-md"
+          >
+            {effectiveImageIndex + 1} / {displayedImages.length}
+          </span>
+        ) : null}
         {showCompactPlaceholder ? (
           <span className="pointer-events-none absolute bottom-4 rounded-full bg-surface/90 px-3 py-1 text-xs font-semibold text-ink-mute">
             사진 준비 중
@@ -64,10 +73,10 @@ export default function FishMediaGallery({ fish, className = '' }: FishMediaGall
               type="button"
               onClick={() => setSelection({ fishId: fish.id, imageKey: image.key })}
               className={[
-                'aspect-[4/3] min-h-11 min-w-0 overflow-hidden rounded-[9px] bg-chipbg outline-offset-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus',
+                'aspect-[4/3] min-h-11 min-w-0 overflow-hidden rounded-[10px] bg-chipbg outline-offset-2 transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus motion-reduce:transition-none',
                 effectiveImageIndex === index
-                  ? 'outline outline-2 outline-accent'
-                  : 'outline outline-1 outline-transparent hover:outline-line',
+                  ? '-translate-y-0.5 outline outline-2 outline-accent shadow-[0_8px_18px_rgba(10,40,54,0.12)] motion-reduce:transform-none'
+                  : 'outline outline-1 outline-transparent hover:-translate-y-0.5 hover:outline-line motion-reduce:transform-none',
               ].join(' ')}
               aria-label={`${fish.name} 이미지 ${index + 1}`}
               aria-pressed={effectiveImageIndex === index}

@@ -1,5 +1,6 @@
 export const BOOKMARK_STORAGE_KEY = 'fishnote:bookmarkedFishIds';
 export const BOOKMARK_MERGE_DISMISSED_KEY = 'fishnote:bookmarkMergeDismissed';
+export const BOOKMARK_MERGE_REQUEST_EVENT = 'fishnote:bookmarkMergeRequested';
 
 type BookmarkSnapshot = number[];
 
@@ -114,6 +115,12 @@ export function clearBookmarkMergeDismissed() {
   } catch {
     return;
   }
+}
+
+export function requestBookmarkMerge() {
+  if (typeof window === 'undefined') return;
+  clearBookmarkMergeDismissed();
+  window.dispatchEvent(new Event(BOOKMARK_MERGE_REQUEST_EVENT));
 }
 
 function notifyLocalBookmarksChanged() {

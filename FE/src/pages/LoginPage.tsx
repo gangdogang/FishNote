@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import { Fish } from 'lucide-react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router';
 import { Field } from '../components/FormField';
+import PasswordInput from '../components/PasswordInput';
 import { inputClass } from '../lib/uiClasses';
 import { useAuth } from '../hooks/useAuth';
 import { getAuthRedirectPath, getAuthSwitchState } from '../lib/authRedirect';
@@ -137,10 +138,9 @@ export default function LoginPage() {
         </Field>
 
         <Field label="비밀번호" htmlFor="login-password" error={fieldErrors.password}>
-          <input
+          <PasswordInput
             id="login-password"
             name="password"
-            type="password"
             autoComplete="current-password"
             value={form.password}
             disabled={submitting}

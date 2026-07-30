@@ -73,7 +73,7 @@ export default function ReviewSection({
     <section
       id="reviews"
       aria-labelledby="reviews-heading"
-      className="mt-14 scroll-mt-24 border-t border-line pt-[34px]"
+      className="mt-14 scroll-mt-[var(--detail-scroll-offset)] border-t border-line pt-[34px]"
     >
       <div className="mb-4 flex items-baseline gap-2">
         <h2 id="reviews-heading" className="m-0 text-19 font-extrabold tracking-normal text-ink">

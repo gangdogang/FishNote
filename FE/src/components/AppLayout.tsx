@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { BookOpen, CalendarDays, Fish, Heart, Moon, Sun } from 'lucide-react';
+import { BookOpen, CalendarDays, Heart, Moon, Sun } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useAuth } from '../hooks/useAuth';
@@ -7,6 +7,7 @@ import { useTheme } from '../hooks/useTheme';
 import { firstGrapheme } from '../lib/grapheme';
 import { fishDetailPath } from '../lib/fishRoutes';
 import BookmarkMergeDialog from './BookmarkMergeDialog';
+import FishNoteMark from './FishNoteMark';
 import RouteAnnouncer from './RouteAnnouncer';
 import RouteFocusManager from './RouteFocusManager';
 import SearchBar from './SearchBar';
@@ -23,6 +24,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [homeHeroVisibility, setHomeHeroVisibility] = useState<'unknown' | 'visible' | 'hidden'>('unknown');
   const profileRef = useRef<HTMLDivElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
   const { pathname } = location;
   const normalizedPathname = normalizePathname(pathname);
   const catalogActive = normalizedPathname === '/' || /^\/fish\/[^/]+$/.test(normalizedPathname);
@@ -31,9 +33,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const showHeaderSearch = normalizedPathname !== '/' || homeHeroVisibility === 'hidden';
   const searchParams = new URLSearchParams(location.search);
   const navClassName = (active: boolean) =>
-    active
-      ? 'flex-none px-0 py-2 text-body-sm font-semibold text-accent transition'
-      : 'flex-none px-0 py-2 text-body-sm font-semibold text-ink-mute transition hover:text-accent';
+    [
+      'relative flex-none px-0 py-2 text-body-sm font-semibold transition-colors duration-200',
+      'after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-center after:rounded-full after:bg-accent after:transition-transform after:duration-200',
+      active
+        ? 'text-accent after:scale-x-100'
+        : 'text-ink-mute after:scale-x-0 hover:text-accent hover:after:scale-x-50',
+    ].join(' ');
 
   function handleHeaderSearch(value: string) {
     const params = new URLSearchParams();
@@ -88,7 +94,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setProfileOpen(false);
+      if (event.key === 'Escape') {
+        setProfileOpen(false);
+        profileButtonRef.current?.focus();
+      }
     }
 
     document.addEventListener('mousedown', handlePointerDown);
@@ -120,9 +129,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <header className="sticky top-0 z-50 border-b border-line bg-surface">
         <div className="mx-auto max-w-content px-4 py-2.5 sm:px-7 md:flex md:min-h-[65px] md:items-center md:gap-7 md:py-3">
           <div className="flex min-h-11 w-full items-center gap-4">
-            <Link to="/" className="flex min-h-11 flex-none items-center gap-2 p-0 text-ink transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2" aria-label="FishNote 홈">
-              <Fish className="h-4 w-[26px] flex-none text-accent" aria-hidden />
-              <span className="text-lead font-extrabold leading-none text-ink">FishNote</span>
+            <Link to="/" className="group/brand flex min-h-11 flex-none items-center gap-2 p-0 text-ink transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2" aria-label="FishNote 홈">
+              <FishNoteMark className="h-7 w-7 flex-none text-accent transition-transform duration-300 group-hover/brand:rotate-[-3deg] group-hover/brand:scale-105 motion-reduce:transform-none motion-reduce:transition-none" />
+              <span className="text-lead font-extrabold leading-none tracking-[-0.025em] text-ink transition-colors group-hover/brand:text-accent">FishNote</span>
             </Link>
 
             <nav className="hidden min-w-0 flex-1 items-center gap-5.5 md:flex">
@@ -167,8 +176,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
               {isAuthenticated && user ? (
                 <div ref={profileRef} className="relative">
                   <button
+                    ref={profileButtonRef}
                     type="button"
-                    aria-haspopup="menu"
+                    aria-controls="account-navigation"
                     aria-expanded={profileOpen}
                     aria-label={`${user.nickname} 계정 메뉴`}
                     onClick={() => setProfileOpen((open) => !open)}
@@ -178,8 +188,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   </button>
 
                   {profileOpen ? (
-                    <div
-                      role="menu"
+                    <nav
+                      id="account-navigation"
+                      aria-label="계정"
                       className="absolute right-0 top-[calc(100%+10px)] z-50 w-[204px] rounded-card border border-line bg-surface py-2 shadow-[0_12px_30px_rgba(26,43,51,0.14)]"
                     >
                       <div className="px-3.5 pb-2 pt-1">
@@ -188,30 +199,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       </div>
                       <div className="my-1 h-px bg-line" />
                       <Link
-                        role="menuitem"
                         to="/saved"
                         onClick={() => setProfileOpen(false)}
-                        className="block px-3.5 py-2 text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent"
+                        className="block px-3.5 py-2 text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
                       >
                         저장한 도감
                       </Link>
                       <Link
-                        role="menuitem"
                         to="/account"
                         onClick={() => setProfileOpen(false)}
-                        className="block px-3.5 py-2 text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent"
+                        className="block px-3.5 py-2 text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
                       >
                         계정 관리
                       </Link>
                       <button
                         type="button"
-                        role="menuitem"
                         onClick={handleLogout}
-                        className="block w-full border-0 bg-transparent px-3.5 py-2 text-left text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent"
+                        className="block w-full border-0 bg-transparent px-3.5 py-2 text-left text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
                       >
                         로그아웃
                       </button>
-                    </div>
+                    </nav>
                   ) : null}
                 </div>
               ) : null}
@@ -233,14 +241,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
 
           {showHeaderSearch ? (
-            <div
-              className={[
-                'w-full md:hidden',
-                normalizedPathname === '/'
-                  ? 'absolute inset-x-0 top-full border-b border-line bg-surface px-4 pb-2.5 pt-2 sm:px-7'
-                  : 'mt-2',
-              ].join(' ')}
-            >
+            <div className="mt-2 w-full md:hidden">
               <SearchBar
                 key={`mobile-${location.search}`}
                 initialValue={searchParams.get('search') ?? ''}
@@ -340,7 +341,10 @@ function SiteFooter() {
     <footer className="border-t border-line bg-surface">
       <div className="mx-auto flex max-w-content flex-col gap-3 px-4 py-7 text-caption text-ink-mute sm:px-7 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="m-0 font-bold text-ink">FishNote</p>
+          <p className="m-0 flex items-center gap-1.5 font-bold text-ink">
+            <FishNoteMark className="h-5 w-5 text-accent" />
+            FishNote
+          </p>
           <p className="m-0 mt-1">제철과 맛 정보는 지역·유통 환경에 따라 달라질 수 있어요.</p>
         </div>
         <nav aria-label="서비스 정보" className="flex min-h-11 flex-wrap items-center gap-x-5 gap-y-2">

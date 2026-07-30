@@ -7,6 +7,7 @@ interface FishIdentitySummaryProps {
   fish: FishDetail;
   priceSummary?: FishPriceSummary;
   bookmarked: boolean;
+  pending?: boolean;
   canGoBack: boolean;
   onBack: () => void;
   onToggleBookmark: () => void;
@@ -19,6 +20,7 @@ export default function FishIdentitySummary({
   fish,
   priceSummary,
   bookmarked,
+  pending = false,
   canGoBack,
   onBack,
   onToggleBookmark,
@@ -72,12 +74,14 @@ export default function FishIdentitySummary({
         <button
           type="button"
           onClick={onToggleBookmark}
-          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-btn border border-primary bg-primary px-5 py-2.5 text-body-sm font-bold text-on-primary transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
-          aria-label={bookmarked ? '횟감 저장 해제' : '횟감 저장'}
+          disabled={pending}
+          aria-busy={pending}
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-btn border border-primary bg-primary px-5 py-2.5 text-body-sm font-bold text-on-primary transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
+          aria-label={pending ? '횟감 저장 처리 중' : bookmarked ? '횟감 저장 해제' : '횟감 저장'}
           aria-pressed={bookmarked}
         >
           <Heart className={bookmarked ? 'h-4 w-4 fill-on-primary text-on-primary' : 'h-4 w-4'} aria-hidden />
-          {bookmarked ? '저장됨' : '저장하기'}
+          {pending ? (bookmarked ? '해제 중...' : '저장 중...') : bookmarked ? '저장됨' : '저장하기'}
         </button>
         <button
           type="button"

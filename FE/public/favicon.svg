@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FishNote">
-  <rect width="64" height="64" rx="14" fill="#0f766e"/>
-  <path d="M12 32c8-10 22-13 34-4l8-7v22l-8-7c-12 9-26 6-34-4Z" fill="#f8fafc"/>
-  <circle cx="40" cy="29" r="3" fill="#0f766e"/>
-  <path d="M24 24c3 5 3 11 0 16" fill="none" stroke="#0f766e" stroke-width="4" stroke-linecap="round"/>
+  <rect width="64" height="64" rx="16" fill="#0A2836"/>
+  <path d="M7.6 32c6.2-10 15.2-15.6 25.4-15 6 .4 11.2 2.8 15 6.4l8.4-5.2v27.6L48 40.6c-3.8 3.6-9 6-15 6.4-10.2.6-19.2-5-25.4-15Z" fill="#E3F0F3" stroke="#5FB6C8" stroke-width="3.4" stroke-linejoin="round"/>
+  <path d="M20.4 25.6h14M18.6 32h17.6M20.4 38.4h14" fill="none" stroke="#0F6E84" stroke-width="3.1" stroke-linecap="round"/>
+  <circle cx="42.2" cy="26.4" r="2.5" fill="#0F6E84"/>
 </svg>

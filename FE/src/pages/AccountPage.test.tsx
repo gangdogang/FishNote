@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAuth } from '../hooks/useAuth';
 import AccountPage from './AccountPage';
+import { BOOKMARK_STORAGE_KEY } from '../lib/bookmarkStorage';
 
 vi.mock('../hooks/useAuth', () => ({ useAuth: vi.fn() }));
 vi.mock('../hooks/usePageMeta', () => ({ usePageMeta: vi.fn() }));
@@ -49,6 +50,20 @@ function renderAccount({
 describe('AccountPage 회원 탈퇴 폼 접근성', () => {
   beforeEach(() => {
     mockedUseAuth.mockReset();
+    window.localStorage.clear();
+  });
+
+  it('로그인 전 로컬 저장이 남아 있으면 병합 재진입점을 제공한다', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(BOOKMARK_STORAGE_KEY, JSON.stringify([2, 7]));
+    const requestListener = vi.fn();
+    window.addEventListener('fishnote:bookmarkMergeRequested', requestListener);
+    renderAccount();
+
+    expect(screen.getByText('로그인 전에 저장한 횟감 2종이 남아 있어요.', { exact: false })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '내 도감으로 옮기기' }));
+    expect(requestListener).toHaveBeenCalledOnce();
+    window.removeEventListener('fishnote:bookmarkMergeRequested', requestListener);
   });
 
   it('모든 입력을 안정적인 id/name과 실제 label로 연결하고 helper를 설명으로 제공한다', () => {

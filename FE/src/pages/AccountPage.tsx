@@ -1,10 +1,16 @@
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useRef, useState, useSyncExternalStore } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { Field } from '../components/FormField';
+import PasswordInput from '../components/PasswordInput';
 import { inputClass } from '../lib/uiClasses';
 import { useAuth } from '../hooks/useAuth';
 import { getErrorMessage } from '../lib/errors';
 import { usePageMeta } from '../hooks/usePageMeta';
+import {
+  readLocalBookmarks,
+  requestBookmarkMerge,
+  subscribeLocalBookmarks,
+} from '../lib/bookmarkStorage';
 
 interface DeleteAccountFieldErrors {
   password?: string;
@@ -14,6 +20,7 @@ interface DeleteAccountFieldErrors {
 const DELETE_PASSWORD_ID = 'delete-password';
 const DELETE_CONFIRMATION_ID = 'delete-confirmation';
 const DELETE_SERVER_ERROR_ID = 'delete-account-server-error';
+const EMPTY_LOCAL_BOOKMARKS: number[] = [];
 
 export default function AccountPage() {
   usePageMeta('계정 관리', undefined, null, { noindex: true });
@@ -24,6 +31,11 @@ export default function AccountPage() {
   const [confirmation, setConfirmation] = useState('');
   const [fieldErrors, setFieldErrors] = useState<DeleteAccountFieldErrors>({});
   const [serverError, setServerError] = useState('');
+  const localBookmarks = useSyncExternalStore(
+    subscribeLocalBookmarks,
+    readLocalBookmarks,
+    () => EMPTY_LOCAL_BOOKMARKS,
+  );
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const confirmationInputRef = useRef<HTMLInputElement>(null);
   const requiresPassword = Boolean(user?.hasPassword);
@@ -82,6 +94,22 @@ export default function AccountPage() {
         </dl>
       </section>
 
+      {localBookmarks.length > 0 ? (
+        <section className="mt-6 rounded-card border border-line bg-surface p-5 sm:p-6">
+          <h2 className="mb-2 mt-0 text-18 font-extrabold text-ink">이 기기에 저장한 도감</h2>
+          <p className="mb-4 mt-0 text-[13.5px] leading-[1.7] text-ink-mute">
+            로그인 전에 저장한 횟감 {localBookmarks.length}종이 남아 있어요. 현재 계정의 내 도감으로 옮길 수 있습니다.
+          </p>
+          <button
+            type="button"
+            onClick={requestBookmarkMerge}
+            className="inline-flex min-h-11 items-center justify-center rounded-btn border border-accent bg-surface px-5 py-2.5 text-sm font-bold text-accent transition hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+          >
+            내 도감으로 옮기기
+          </button>
+        </section>
+      ) : null}
+
       <section className="mt-6 rounded-card border border-red-200 dark:border-red-900 bg-surface p-5 sm:p-6">
         <h2 className="mb-2 mt-0 text-18 font-extrabold text-red-700 dark:text-red-400">회원 탈퇴</h2>
         <p className="mb-5 mt-0 text-[13.5px] leading-[1.7] text-ink-mute">
@@ -96,10 +124,9 @@ export default function AccountPage() {
               helper="계정 확인을 위해 현재 비밀번호가 필요해요."
               error={fieldErrors.password}
             >
-              <input
+              <PasswordInput
                 ref={passwordInputRef}
                 name="currentPassword"
-                type="password"
                 autoComplete="current-password"
                 required
                 value={password}

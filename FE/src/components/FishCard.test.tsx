@@ -7,8 +7,8 @@ import FishCard from './FishCard';
 
 const bookmarkMocks = vi.hoisted(() => ({
   isBookmarked: vi.fn(() => false),
+  isBookmarkPending: vi.fn<(fishId: number) => boolean>(() => false),
   toggleBookmark: vi.fn(),
-  isBookmarkMutationPending: false,
 }));
 
 vi.mock('../hooks/useBookmarks', () => ({
@@ -49,7 +49,7 @@ function renderCard() {
 describe('FishCard', () => {
   beforeEach(() => {
     bookmarkMocks.isBookmarked.mockReturnValue(false);
-    bookmarkMocks.isBookmarkMutationPending = false;
+    bookmarkMocks.isBookmarkPending.mockReturnValue(false);
   });
 
   it('상세 링크와 저장 버튼을 형제로 렌더링하고 링크부터 탭 이동한다', async () => {
@@ -60,6 +60,8 @@ describe('FishCard', () => {
 
     expect(container.querySelector('a button')).not.toBeInTheDocument();
     expect(detailLink.parentElement).toBe(saveButton.parentElement);
+    expect(detailLink.parentElement).toHaveClass('fish-card');
+    expect(container.querySelector('.fish-card-image')).toBeInTheDocument();
 
     await user.tab();
     expect(detailLink).toHaveFocus();
@@ -106,7 +108,7 @@ describe('FishCard', () => {
 
   it('서버 저장 mutation 중에는 저장 버튼을 잠그고 중복 입력을 막는다', async () => {
     const user = userEvent.setup();
-    bookmarkMocks.isBookmarkMutationPending = true;
+    bookmarkMocks.isBookmarkPending.mockImplementation((fishId) => fishId === fish.id);
     renderCard();
 
     const saveButton = screen.getByRole('button', { name: '광어 저장 처리 중' });

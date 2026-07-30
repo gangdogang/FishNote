@@ -1,4 +1,4 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { addMyBookmark, bookmarksMeQueryKey, deleteMyBookmark, getMyBookmarks } from '../api/bookmarks';
 import {
@@ -16,10 +16,12 @@ type BookmarkSnapshot = number[];
 interface ToggleBookmarkVariables {
   fishId: number;
   shouldBookmark: boolean;
+  authScope: string;
 }
 
 interface ToggleBookmarkContext {
-  previousBookmarks: FishSummary[] | undefined;
+  previousFish: FishSummary;
+  wasBookmarked: boolean;
 }
 
 const emptySnapshot: BookmarkSnapshot = [];
@@ -40,12 +42,11 @@ function useBookmarksState() {
   const serverBookmarkedIds = useMemo(() => serverBookmarks.map((fish) => fish.id), [serverBookmarks]);
   const bookmarkedIds = isServerMode ? serverBookmarkedIds : localBookmarkedIds;
   const bookmarkedIdSet = useMemo(() => new Set(bookmarkedIds), [bookmarkedIds]);
-  const serverMutationPendingRef = useRef(false);
-  const mutationAccessTokenRef = useRef(accessToken);
-
+  const pendingFishScopesRef = useRef(new Map<number, string>());
+  const [pendingFishScopes, setPendingFishScopes] = useState<ReadonlyMap<number, string>>(() => new Map());
+  const currentAccessTokenRef = useRef(accessToken);
   useEffect(() => {
-    mutationAccessTokenRef.current = accessToken;
-    serverMutationPendingRef.current = false;
+    currentAccessTokenRef.current = accessToken;
   }, [accessToken]);
 
   const toggleBookmarkMutation = useMutation<void, unknown, ToggleBookmarkVariables, ToggleBookmarkContext>({
@@ -53,41 +54,67 @@ function useBookmarksState() {
     onMutate: async ({ fishId, shouldBookmark }) => {
       await queryClient.cancelQueries({ queryKey: bookmarksMeQueryKey });
 
-      const previousBookmarks = queryClient.getQueryData<FishSummary[]>(bookmarksMeQueryKey);
-      const optimisticFish = findCachedFishSummary(queryClient, fishId) ?? createOptimisticFishSummary(fishId);
+      const previousBookmarks = queryClient.getQueryData<FishSummary[]>(bookmarksMeQueryKey) ?? [];
+      const previousFish = previousBookmarks.find((fish) => fish.id === fishId)
+        ?? findCachedFishSummary(queryClient, fishId)
+        ?? createOptimisticFishSummary(fishId);
+      const wasBookmarked = previousBookmarks.some((fish) => fish.id === fishId);
 
       queryClient.setQueryData<FishSummary[]>(bookmarksMeQueryKey, (currentBookmarks = []) => {
         if (shouldBookmark) {
           if (currentBookmarks.some((fish) => fish.id === fishId)) return currentBookmarks;
-          return [...currentBookmarks, optimisticFish];
+          return [...currentBookmarks, previousFish];
         }
 
         return currentBookmarks.filter((fish) => fish.id !== fishId);
       });
 
-      return { previousBookmarks };
+      return { previousFish, wasBookmarked };
     },
-    onError: (_error, _variables, context) => {
-      queryClient.setQueryData(bookmarksMeQueryKey, context?.previousBookmarks ?? []);
+    onError: (_error, { fishId, shouldBookmark, authScope }, context) => {
+      if (currentAccessTokenRef.current !== authScope) return;
+      queryClient.setQueryData<FishSummary[]>(bookmarksMeQueryKey, (currentBookmarks = []) => {
+        if (context?.wasBookmarked) {
+          if (currentBookmarks.some((fish) => fish.id === fishId)) return currentBookmarks;
+          return [...currentBookmarks, context.previousFish];
+        }
+        return currentBookmarks.filter((fish) => fish.id !== fishId);
+      });
+      showToast(shouldBookmark
+        ? '저장하지 못했어요. 다시 시도해 주세요'
+        : '저장 해제를 완료하지 못했어요. 다시 시도해 주세요');
     },
-    onSuccess: (_data, { fishId, shouldBookmark }) => {
+    onSuccess: (_data, { fishId, shouldBookmark, authScope }) => {
+      if (currentAccessTokenRef.current !== authScope) return;
       trackAnalyticsEvent('bookmark_changed', {
         fishId,
         action: shouldBookmark ? 'saved' : 'removed',
         authenticated: true,
       });
+      if (shouldBookmark) showToast('내 도감에 저장했어요');
     },
-    onSettled: () => {
-      serverMutationPendingRef.current = false;
-      queryClient.invalidateQueries({ queryKey: bookmarksMeQueryKey });
+    onSettled: (_data, _error, { fishId, authScope }) => {
+      if (pendingFishScopesRef.current.get(fishId) === authScope) {
+        pendingFishScopesRef.current.delete(fishId);
+        setPendingFishScopes(new Map(pendingFishScopesRef.current));
+      }
+      const hasPendingInScope = [...pendingFishScopesRef.current.values()]
+        .some((scope) => scope === authScope);
+      if (!hasPendingInScope && currentAccessTokenRef.current === authScope) {
+        queryClient.invalidateQueries({ queryKey: bookmarksMeQueryKey });
+      }
     },
   });
 
   const isBookmarked = useCallback((fishId: number) => bookmarkedIdSet.has(fishId), [bookmarkedIdSet]);
+  const isBookmarkPending = useCallback(
+    (fishId: number) => Boolean(accessToken) && pendingFishScopes.get(fishId) === accessToken,
+    [accessToken, pendingFishScopes],
+  );
 
   const toggleBookmark = useCallback(
     (fishId: number) => {
-      if (!isServerMode) {
+      if (!accessToken) {
         const currentIds = readLocalBookmarks();
         const isAdding = !currentIds.includes(fishId);
         const nextIds = isAdding ? [...currentIds, fishId] : currentIds.filter((id) => id !== fishId);
@@ -105,15 +132,13 @@ function useBookmarksState() {
         return;
       }
 
-      if (serverMutationPendingRef.current) return;
-      serverMutationPendingRef.current = true;
+      if (pendingFishScopesRef.current.get(fishId) === accessToken) return;
+      pendingFishScopesRef.current.set(fishId, accessToken);
+      setPendingFishScopes(new Map(pendingFishScopesRef.current));
       const shouldBookmark = !bookmarkedIdSet.has(fishId);
-      toggleBookmarkMutation.mutate({ fishId, shouldBookmark });
-      if (shouldBookmark) {
-        showToast('내 도감에 저장했어요');
-      }
+      toggleBookmarkMutation.mutate({ fishId, shouldBookmark, authScope: accessToken });
     },
-    [bookmarkedIdSet, isServerMode, showToast, toggleBookmarkMutation],
+    [accessToken, bookmarkedIdSet, showToast, toggleBookmarkMutation],
   );
 
   // Provider value로 내려가므로 참조 안정성 필수 — 매 렌더 새 객체면 모든 소비자(FishCard 등)가 리렌더됨
@@ -124,9 +149,11 @@ function useBookmarksState() {
       bookmarkedFishes: serverBookmarks,
       bookmarkCount: bookmarkedIds.length,
       isBookmarked,
+      isBookmarkPending,
       toggleBookmark,
       isServerMode,
-      isBookmarkMutationPending: isServerMode && toggleBookmarkMutation.isPending,
+      isBookmarkMutationPending: isServerMode && [...pendingFishScopes.values()]
+        .some((scope) => scope === accessToken),
       isLoading: isServerMode ? bookmarksQuery.isLoading : false,
       isError: isServerMode ? bookmarksQuery.isError : false,
       refetchBookmarks: bookmarksQuery.refetch,
@@ -136,9 +163,11 @@ function useBookmarksState() {
       bookmarkedIdSet,
       serverBookmarks,
       isBookmarked,
+      isBookmarkPending,
       toggleBookmark,
       isServerMode,
-      toggleBookmarkMutation.isPending,
+      pendingFishScopes,
+      accessToken,
       bookmarksQuery.isLoading,
       bookmarksQuery.isError,
       bookmarksQuery.refetch,
@@ -182,7 +211,13 @@ function findFishSummaryInValue(value: unknown, fishId: number): FishSummary | n
     return null;
   }
 
-  return normalizeFishSummary(value, fishId);
+  const directMatch = normalizeFishSummary(value, fishId);
+  if (directMatch) return directMatch;
+  if (!value || typeof value !== 'object') return null;
+
+  const container = value as { items?: unknown; pages?: unknown };
+  return findFishSummaryInValue(container.items, fishId)
+    ?? findFishSummaryInValue(container.pages, fishId);
 }
 
 function normalizeFishSummary(value: unknown, fishId: number): FishSummary | null {

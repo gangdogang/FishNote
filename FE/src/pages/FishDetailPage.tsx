@@ -8,6 +8,7 @@ import PriceSection from '../components/PriceSection';
 import ReviewSection from '../components/ReviewSection';
 import SimilarFishSection from '../components/SimilarFishSection';
 import CorrectionDialog from '../components/CorrectionDialog';
+import DetailSectionNav from '../components/DetailSectionNav';
 import { DetailSkeleton } from '../components/Skeletons';
 import SourceSection from '../components/SourceSection';
 import VerificationSummary from '../components/VerificationSummary';
@@ -82,7 +83,7 @@ function FishDetailPageContent({ identifier }: { identifier: string }) {
   const deleteMutation = useDeleteReview(fishId);
   const helpfulMutation = useMarkReviewHelpful(fishId);
   const correctionMutation = useSubmitFishCorrection(fishId);
-  const { isBookmarked, toggleBookmark, isServerMode } = useBookmarks();
+  const { isBookmarked, isBookmarkPending, toggleBookmark, isServerMode } = useBookmarks();
   const detailTrackedFishId = useRef<number | null>(null);
   const sourceSection = readSourceSection(location.state);
   const isNotFound = !isValidFishIdentifier(identifier) || (isError && isNotFoundError(fishError));
@@ -256,6 +257,7 @@ function FishDetailPageContent({ identifier }: { identifier: string }) {
           fish={fish}
           priceSummary={priceSummary}
           bookmarked={bookmarked}
+          pending={isBookmarkPending(fish.id)}
           canGoBack={canGoBack}
           onBack={() => (canGoBack ? navigate(-1) : navigate('/'))}
           onToggleBookmark={() => toggleBookmark(fish.id)}
@@ -273,6 +275,8 @@ function FishDetailPageContent({ identifier }: { identifier: string }) {
         />
         <FishMediaGallery fish={fish} className="lg:order-1" />
       </section>
+
+      <DetailSectionNav />
 
       <FishTasteSection
         fishId={fish.id}

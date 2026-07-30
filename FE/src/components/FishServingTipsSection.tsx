@@ -4,7 +4,11 @@ interface FishServingTipsSectionProps {
 
 export default function FishServingTipsSection({ tips = [] }: FishServingTipsSectionProps) {
   return (
-    <section className="mt-9" aria-labelledby="fish-tips-heading">
+    <section
+      id="tips-section"
+      className="mt-9 scroll-mt-[var(--detail-scroll-offset)]"
+      aria-labelledby="fish-tips-heading"
+    >
       <h2 id="fish-tips-heading" className="m-0 mb-3.5 text-19 font-extrabold tracking-normal text-ink">
         이렇게 즐겨요
       </h2>

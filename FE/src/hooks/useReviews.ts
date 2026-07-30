@@ -44,8 +44,10 @@ function invalidateRatingQueries(queryClient: QueryClient, fishId: number) {
   void queryClient.invalidateQueries({
     predicate: (query) =>
       query.queryKey[0] === 'fish' &&
-      query.queryKey.length === 2 &&
-      typeof query.queryKey[1] === 'object',
+      (
+        (query.queryKey.length === 2 && typeof query.queryKey[1] === 'object')
+        || (query.queryKey[1] === 'infinite' && typeof query.queryKey[2] === 'object')
+      ),
   });
 }
 

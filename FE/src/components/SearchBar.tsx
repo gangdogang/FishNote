@@ -74,8 +74,8 @@ export default function SearchBar({
       onSubmit={handleSubmit}
       className={[
         isCompact
-          ? 'relative flex min-h-11 w-full min-w-0 items-center gap-2 rounded-full border border-control-border bg-mist py-0 pl-3 pr-0.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-focus'
-          : 'relative mx-auto flex min-h-[58px] w-full max-w-[520px] min-w-0 items-center gap-3 rounded-card border-[1.5px] border-control-border bg-surface py-0 pl-[18px] pr-2 focus-within:border-accent focus-within:ring-2 focus-within:ring-focus',
+          ? 'relative flex min-h-11 w-full min-w-0 items-center gap-2 rounded-full border border-control-border bg-mist py-0 pl-3 pr-0.5 transition-[border-color,box-shadow,background-color] duration-200 focus-within:border-accent focus-within:bg-surface focus-within:ring-2 focus-within:ring-focus motion-reduce:transition-none'
+          : 'relative mx-auto flex min-h-[58px] w-full max-w-[520px] min-w-0 items-center gap-3 rounded-card border-[1.5px] border-control-border bg-surface py-0 pl-[18px] pr-2 shadow-[0_8px_24px_rgba(10,40,54,0.06)] transition-[border-color,box-shadow] duration-200 focus-within:border-accent focus-within:shadow-[0_12px_30px_rgba(10,40,54,0.12)] focus-within:ring-2 focus-within:ring-focus motion-reduce:transition-none',
         className,
       ].join(' ')}
     >
@@ -93,7 +93,7 @@ export default function SearchBar({
         inputClassName="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-ink-mute xl:text-body-sm"
       />
       <button
-        className={isCompact ? 'flex h-11 w-11 flex-none items-center justify-center rounded-full bg-primary text-on-primary transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2' : 'inline-flex h-11 flex-none items-center justify-center rounded-btn bg-primary px-4.5 text-body-sm font-bold text-on-primary transition hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2'}
+        className={isCompact ? 'flex h-11 w-11 flex-none items-center justify-center rounded-full bg-primary text-on-primary transition duration-200 hover:bg-primary-hover active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none' : 'inline-flex h-11 flex-none items-center justify-center rounded-btn bg-primary px-4.5 text-body-sm font-bold text-on-primary transition duration-200 hover:bg-primary-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 motion-reduce:transform-none motion-reduce:transition-none'}
         type="submit"
         aria-label="검색"
       >

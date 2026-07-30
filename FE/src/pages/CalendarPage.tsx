@@ -1,4 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Info } from 'lucide-react';
+import { Link } from 'react-router';
 import FishCard from '../components/FishCard';
 import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import { useFishList } from '../hooks/useFish';
@@ -14,6 +16,8 @@ export default function CalendarPage() {
   const {
     data: monthFishes = [],
     isLoading: isMonthLoading,
+    isFetching: isMonthFetching,
+    isPlaceholderData: isMonthPlaceholderData,
     isError: isMonthError,
     refetch: refetchMonth,
   } = useFishList({ month: selectedMonth, sort: 'popular' });
@@ -42,7 +46,28 @@ export default function CalendarPage() {
       <h1 className="mb-2 text-30 font-bold tracking-[-0.03em] text-ink">제철 캘린더</h1>
       <p className="mb-[26px] text-[15.5px] leading-[1.5] text-ink-mute">달을 선택하면 그 달에 제철인 회를 모아 보여드려요.</p>
 
-      <div className="-mx-4 mb-8 overflow-x-auto px-4 sm:-mx-7 sm:px-7 lg:mx-0 lg:overflow-visible lg:px-0">
+      <aside
+        aria-label="제철 표시 기준"
+        className="mb-7 flex items-start gap-3 rounded-[14px] bg-accent-soft/[0.62] px-4 py-3.5 text-body-sm text-ink"
+      >
+        <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-[9px] bg-surface text-accent shadow-[0_4px_12px_rgba(10,40,54,0.08)]">
+          <Info className="h-4 w-4" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="m-0 text-pretty leading-[1.6]">
+            <strong className="font-bold">대표 제철 기준</strong>
+            <span className="text-ink-mute"> · 자연산 중심의 대표 월이며, 양식·수입종은 연중으로 표시될 수 있어요.</span>
+          </p>
+          <Link
+            to="/sources"
+            className="mt-1 inline-flex min-h-11 items-center font-bold text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            근거와 검수 방식 보기 →
+          </Link>
+        </div>
+      </aside>
+
+      <div className="-mx-4 mb-8 snap-x snap-mandatory overflow-x-auto scroll-smooth px-4 pb-2 pt-1 [scrollbar-width:none] sm:-mx-7 sm:px-7 lg:mx-0 lg:overflow-visible lg:px-0 [&::-webkit-scrollbar]:hidden motion-reduce:scroll-auto">
         <div
           className="flex min-w-max gap-2 lg:grid lg:min-w-0 lg:grid-cols-12 lg:gap-1.75"
           role="group"
@@ -65,10 +90,10 @@ export default function CalendarPage() {
                 type="button"
                 onClick={() => setSelectedMonth(month)}
                 className={[
-                  'flex h-[58px] min-h-11 w-[74px] min-w-11 flex-none flex-col items-center justify-center rounded-[11px] border px-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 lg:w-auto',
+                  'calendar-month-button flex h-[58px] min-h-11 w-[74px] min-w-11 flex-none flex-col items-center justify-center rounded-[12px] border px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 lg:w-auto',
                   active
                     ? 'border-transparent bg-primary text-on-primary'
-                    : 'border-line bg-surface text-ink hover:border-accent hover:text-accent',
+                    : 'border-line/80 bg-surface text-ink hover:-translate-y-0.5 hover:border-accent/40 hover:text-accent motion-reduce:transform-none',
                 ].join(' ')}
                 aria-current={active ? 'date' : undefined}
                 aria-pressed={active}
@@ -89,7 +114,7 @@ export default function CalendarPage() {
       </div>
 
       <h2 className="mb-5 text-[22px] font-bold tracking-[-0.02em] text-ink">
-        {selectedMonth}월 제철 <span className="text-17 font-medium text-ink-mute">· {isMonthLoading || isMonthError ? '-' : monthFishes.length}종</span>
+        {selectedMonth}월 제철 <span className="text-17 font-medium text-ink-mute">· {isMonthLoading || isMonthError || isMonthPlaceholderData ? '-' : monthFishes.length}종</span>
       </h2>
 
       {isMonthLoading ? (
@@ -98,9 +123,21 @@ export default function CalendarPage() {
       {isMonthError ? (
         <ErrorState onRetry={() => void Promise.all([refetchMonth(), refetchCounts()])} />
       ) : null}
+      {isMonthFetching && !isMonthLoading ? (
+        <p role="status" aria-live="polite" className="m-0 mb-3 text-body-sm text-ink-mute">
+          {selectedMonth}월 제철 목록을 업데이트하는 중...
+        </p>
+      ) : null}
       {!isMonthLoading && !isMonthError && monthFishes.length === 0 ? <EmptyState /> : null}
       {!isMonthLoading && !isMonthError && monthFishes.length > 0 ? (
-        <div className="grid gap-5.5 [grid-template-columns:repeat(auto-fill,minmax(256px,1fr))]">
+        <div
+          key={selectedMonth}
+          aria-busy={isMonthFetching}
+          className={[
+            'season-results-enter grid gap-5.5 transition-opacity [grid-template-columns:repeat(auto-fill,minmax(256px,1fr))] motion-reduce:transition-none',
+            isMonthPlaceholderData ? 'opacity-[0.55]' : 'opacity-100',
+          ].join(' ')}
+        >
           {monthFishes.map((fish, index) => (
             <FishCard key={fish.id} fish={fish} analyticsSection="calendar_month" analyticsPosition={index + 1} sort="popular" />
           ))}

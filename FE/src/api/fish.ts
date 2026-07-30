@@ -2,6 +2,7 @@ import axios from 'axios';
 import { apiClient, apiVersionUrl } from './client';
 import type {
   FishDetail,
+  FishCatalogPage,
   FishFacets,
   FishListParams,
   FishPriceSummary,
@@ -10,14 +11,9 @@ import type {
   HomeData,
 } from '../types/fish';
 
-interface FishCatalogV2Response {
-  items: FishSummary[];
-  pageInfo: {
-    nextCursor: string | null;
-    hasNext: boolean;
-    limit: number;
-  };
-  facets: FishFacets;
+interface FishCatalogPageOptions {
+  cursor?: string;
+  limit?: number;
 }
 
 // 운영은 명시적으로 opt-in해야 한다. Vercel 환경변수 누락만으로 신규 API가
@@ -27,20 +23,39 @@ const catalogV2Enabled = import.meta.env.PROD
   : import.meta.env.VITE_CATALOG_V2_ENABLED !== 'false';
 
 export async function getFishList(params: FishListParams = {}) {
+  const page = await getFishCatalogPage(params, { limit: 100 });
+  return page.items;
+}
+
+export async function getFishCatalogPage(
+  params: FishListParams = {},
+  options: FishCatalogPageOptions = {},
+): Promise<FishCatalogPage> {
+  const limit = options.limit ?? 24;
   if (catalogV2Enabled) {
     try {
-      const { data } = await apiClient.get<FishCatalogV2Response>(apiVersionUrl(2, 'fish'), {
-        params: { ...params, limit: 100 },
+      const { data } = await apiClient.get<FishCatalogPage>(apiVersionUrl(2, 'fish'), {
+        params: {
+          ...params,
+          limit,
+          ...(options.cursor ? { cursor: options.cursor } : {}),
+        },
       });
       if (!isFishCatalogV2Response(data)) throw new V2UnavailableError();
-      return data.items;
+      return data;
     } catch (error) {
       if (!canFallbackToV1(error)) throw error;
+      // 이미 받은 v2 목록에 v1 첫 페이지를 중복으로 붙이지 않는다.
+      if (options.cursor) throw error;
     }
   }
 
   const { data } = await apiClient.get<FishSummary[]>('/fish', { params });
-  return data;
+  return {
+    items: data,
+    pageInfo: { nextCursor: null, hasNext: false, limit: data.length },
+    facets: deriveFacets(data),
+  };
 }
 
 export async function getHomeData(month: number, sort: 'popular' | 'name' = 'popular') {
@@ -100,9 +115,9 @@ function canFallbackToV1(error: unknown) {
   return status === undefined || status === 404 || status >= 500;
 }
 
-function isFishCatalogV2Response(value: unknown): value is FishCatalogV2Response {
+function isFishCatalogV2Response(value: unknown): value is FishCatalogPage {
   if (!value || typeof value !== 'object') return false;
-  const response = value as Partial<FishCatalogV2Response>;
+  const response = value as Partial<FishCatalogPage>;
   return Array.isArray(response.items)
     && Boolean(response.pageInfo && typeof response.pageInfo.hasNext === 'boolean')
     && Boolean(response.facets && typeof response.facets === 'object');

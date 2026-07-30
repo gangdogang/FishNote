@@ -62,7 +62,9 @@ describe('App smoke', () => {
     const { container } = renderApp();
 
     expect(screen.getByRole('heading', { level: 1, name: '아는 만큼 맛있어지는 회' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'FishNote 홈' })).toBeInTheDocument();
+    const homeLink = screen.getByRole('link', { name: 'FishNote 홈' });
+    expect(homeLink).toBeInTheDocument();
+    expect(homeLink.querySelector('[data-fishnote-mark]')).toHaveAttribute('aria-hidden', 'true');
     const main = screen.getByRole('main');
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(document.querySelectorAll('#main-content')).toHaveLength(1);
@@ -86,7 +88,7 @@ describe('App smoke', () => {
       'pb-[calc(68px+var(--safe-area-bottom))]',
     );
     expect(screen.getByRole('heading', { level: 1, name: '아는 만큼 맛있어지는 회' }))
-      .toHaveClass('text-balance', 'text-title');
+      .toHaveClass('text-balance', 'text-[2rem]', 'sm:text-[2.5rem]');
 
     screen.getAllByRole('combobox').forEach((input) => {
       expect(input).toHaveClass('text-base', 'xl:text-body-sm');

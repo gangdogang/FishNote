@@ -87,17 +87,20 @@ describe('authentication form accessibility', () => {
     const email = screen.getByLabelText('이메일');
     const nickname = screen.getByLabelText('닉네임');
     const password = screen.getByLabelText('비밀번호');
+    const confirmPassword = screen.getByLabelText('비밀번호 확인');
     const submit = screen.getByRole('button', { name: '가입하기' });
 
-    expect([email, nickname, password].map((control) => control.id)).toEqual([
+    expect([email, nickname, password, confirmPassword].map((control) => control.id)).toEqual([
       'signup-email',
       'signup-nickname',
       'signup-password',
+      'signup-confirm-password',
     ]);
-    expect([email, nickname, password].map((control) => control.getAttribute('name'))).toEqual([
+    expect([email, nickname, password, confirmPassword].map((control) => control.getAttribute('name'))).toEqual([
       'email',
       'nickname',
       'password',
+      'confirmPassword',
     ]);
     expect(getDescriptionElements(password)).toHaveLength(1);
     expect(getDescriptionElements(password)[0]).toHaveTextContent('8자 이상이면 돼요');
@@ -138,9 +141,34 @@ describe('authentication form accessibility', () => {
     await user.type(screen.getByLabelText('이메일'), 'fish@example.com');
     await user.type(screen.getByLabelText('닉네임'), '회러버');
     await user.type(screen.getByLabelText('비밀번호'), 'password123');
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'password123');
     await user.click(screen.getByRole('button', { name: '가입하기' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('회원가입 요청을 처리하지 못했습니다.');
+  });
+
+  it('비밀번호를 표시·숨길 수 있고 회원가입 비밀번호 불일치를 제출 전에 막는다', async () => {
+    const user = userEvent.setup();
+    const loginView = renderAuthPage(<LoginPage />, '/login');
+    const loginPassword = screen.getByLabelText('비밀번호');
+
+    expect(loginPassword).toHaveAttribute('type', 'password');
+    await user.click(screen.getByRole('button', { name: '비밀번호 표시' }));
+    expect(loginPassword).toHaveAttribute('type', 'text');
+    await user.click(screen.getByRole('button', { name: '비밀번호 숨기기' }));
+    expect(loginPassword).toHaveAttribute('type', 'password');
+    loginView.unmount();
+
+    renderAuthPage(<SignupPage />, '/signup');
+    await user.type(screen.getByLabelText('이메일'), 'fish@example.com');
+    await user.type(screen.getByLabelText('닉네임'), '회러버');
+    await user.type(screen.getByLabelText('비밀번호'), 'password123');
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'password456');
+    await user.click(screen.getByRole('button', { name: '가입하기' }));
+
+    expect(screen.getByLabelText('비밀번호 확인')).toHaveFocus();
+    expect(screen.getByRole('alert')).toHaveTextContent('비밀번호가 서로 달라요.');
+    expect(signup).not.toHaveBeenCalled();
   });
 
   it('제출 중에는 입력과 제출 버튼을 disabled 상태로 유지한다', () => {
@@ -156,6 +184,7 @@ describe('authentication form accessibility', () => {
     expect(screen.getByLabelText('이메일')).toBeDisabled();
     expect(screen.getByLabelText('닉네임')).toBeDisabled();
     expect(screen.getByLabelText('비밀번호')).toBeDisabled();
+    expect(screen.getByLabelText('비밀번호 확인')).toBeDisabled();
     expect(screen.getByRole('button', { name: '확인 중...' })).toBeDisabled();
   });
 });

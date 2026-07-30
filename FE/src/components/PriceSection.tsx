@@ -70,7 +70,11 @@ export default function PriceSection({
   }
 
   return (
-    <section id="price-section" className="mt-11 scroll-mt-24" aria-labelledby="price-section-heading">
+    <section
+      id="price-section"
+      className="mt-11 scroll-mt-[var(--detail-scroll-offset)]"
+      aria-labelledby="price-section-heading"
+    >
       <div className="mb-3.5 flex min-h-11 flex-wrap items-center justify-between gap-2">
         <h2 id="price-section-heading" className="m-0 text-19 font-extrabold tracking-normal text-ink">
           가격 현황
