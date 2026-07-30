@@ -26,6 +26,10 @@
 | GET | `/api/v2/fish` | cursor 목록·facets·alias 검색 |
 | GET | `/api/v2/fish/{id|slug}` | projection 기반 상세 |
 | GET | `/api/v2/fish/{id}/reviews` | cursor 후기·선택 summary |
+| GET | `/admin/overview` | 관리자 운영 지표·최근 작업 |
+| GET/POST/PUT | `/admin/fishes[/{id}]` | 관리자 도감 목록·등록·수정 |
+| GET/PATCH | `/admin/corrections[/{id}]` | 관리자 오류 제보 목록·상태 변경 |
+| GET/DELETE | `/admin/reviews[/{id}]` | 관리자 최근 후기 목록·삭제 |
 | GET | `/actuator/health/liveness` | 프로세스 liveness |
 | GET | `/actuator/health/readiness` | DB 포함 readiness |
 
@@ -613,3 +617,22 @@ price key만 무효화한다. 캐시는 process-local 최적화이며 source of 
 
 현재 property 기본값은 모두 true다. 점진 배포에서는 코드를 배포하기 전 환경변수를 false로
 명시한 뒤 하나씩 전환한다.
+
+## 16. 관리자 API
+
+`/api/v1/admin/**`는 Bearer 인증과 DB의 현재 `users.role=ADMIN`이 모두 필요하다. JWT에는 역할을
+고정하지 않으며 요청마다 현재 역할을 읽으므로 운영 중 권한 회수가 즉시 반영된다. 비인증은 401,
+일반 회원은 403 `FORBIDDEN`이다.
+
+- `GET /admin/overview`: 횟감·후기·대기 제보·회원 수와 최근 감사 로그 10건
+- `GET /admin/fishes`: 이름순 전체 관리 DTO
+- `POST /admin/fishes`: 횟감 등록(201)
+- `PUT /admin/fishes/{id}`: 횟감 전체 수정
+- `GET /admin/corrections?status=PENDING&limit=50`: 제보 최신순 조회
+- `PATCH /admin/corrections/{id}`: `PENDING/RESOLVED/REJECTED` 상태 변경
+- `GET /admin/reviews?limit=50`: 후기 최신순 조회
+- `DELETE /admin/reviews/{id}`: 이미지 정리 대기를 포함한 관리자 삭제(204)
+
+도감 등록·수정, 제보 상태 변경, 후기 삭제는 `admin_audit_log`에 작업자·대상·요약·시각을 남긴다.
+도감 수정 commit 후 catalog/detail/home 서버 캐시를 모두 무효화한다. 이름·slug·전역 normalized
+별칭 충돌은 409이며, 횟감 물리 삭제 API는 제공하지 않는다.

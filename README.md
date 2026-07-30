@@ -61,7 +61,7 @@ CATALOG_V2_ENABLED=true                               # /api/v2/fish 공개 여�
 PRICE_IMPORT_BULK_ENABLED=true                        # false면 webhook당 최대 50행 legacy persist 경로
 SOURCES_ENABLED=true                                  # 출처 API 공개 여부
 PUBLIC_CACHE_ENABLED=true                             # false면 Caffeine 비활성 + public 응답 no-store
-SPRING_FLYWAY_TARGET=17                               # V18 contract 전 안정화 배포에서만 사용
+SPRING_FLYWAY_TARGET=20                               # 운영 승인된 최신 migration까지 명시적으로 고정
 ```
 
 빠른 단위 테스트는 H2를 사용하고, 실제 PostgreSQL/Flyway·동시성·쿼리 예산 계약은
@@ -125,6 +125,28 @@ https://www.fishnote.kr/auth/kakao/callback
 
 REST API 키는 프론트와 백엔드에 같은 값을 설정합니다. Client Secret은 `KAKAO_CLIENT_SECRET`으로 백엔드에만 설정하며 저장소나 Vercel 환경변수에는 넣지 않습니다. 카카오가 검증된 이메일을 제공하면 기존 이메일 회원과 연결하고, 이메일이 없으면 카카오 식별자만으로 전용 계정을 만듭니다. 인가 코드는 백엔드가 토큰으로 교환한 뒤 기존 FishNote JWT를 발급합니다.
 
+### 관리자 계정 설정
+
+관리자 전용 회원가입은 제공하지 않습니다. 먼저 일반 이메일 계정으로 가입한 다음 운영 DB에서 그 계정을
+명시적으로 승격합니다. 이메일 인증이 아직 없으므로 **계정이 생성되기 전에 이메일 allowlist만으로
+자동 승격하지 않습니다.**
+
+```bash
+DATABASE_URL='postgresql://...' ./scripts/promote_admin.sh operator@example.com
+```
+
+승격 후 다시 로그인하면 계정 메뉴에 `관리자`가 표시되고 `/admin`에서 다음 작업을 할 수 있습니다.
+
+- 횟감 등록·수정, 제철 월·맛 태그·팁·별칭·기본 이미지 URL 관리
+- 추천 횟감(`featured`) 노출 설정
+- 정보 오류 제보 처리와 재열기
+- 운영 정책 위반 후기 삭제
+- 최근 관리자 작업 이력 확인
+
+관리 API는 `/api/v1/admin/**`이며 백엔드가 매 요청마다 DB의 현재 `role`을 검사합니다. 따라서
+`role`을 `USER`로 되돌리면 이미 발급된 JWT가 남아 있어도 관리자 권한은 즉시 회수됩니다. 횟감 물리
+삭제는 후기·시세·북마크 연관 데이터 손실 위험 때문에 제공하지 않습니다.
+
 ## API 요약
 
 Base URL: `/api/v1`, `/api/v2` — 상세 명세는 [`docs/04_API명세.md`](docs/04_API명세.md)
@@ -133,6 +155,7 @@ Base URL: `/api/v1`, `/api/v2` — 상세 명세는 [`docs/04_API명세.md`](doc
 - `GET /fish/{id|slug}` — 상세 (media·갤러리·팁·별점 분포·비슷한 횟감 포함)
 - `GET /fish/suggestions?q=...` — 이름·영문명·시장 별칭 자동완성
 - `GET /fish/{id|slug}/sources` · `POST /fish/{id}/corrections` — 주장별 출처·오류 제보
+- `GET/POST/PUT /admin/...` — 관리자 전용 도감·제보·후기·감사 로그 관리
 - `GET /home?month=7&sort=popular` — 홈 seasonal/featured/catalog/facets 통합
 - `GET /fish/{id}/prices?days=14&resolution=DAY&maxPoints=30` — 최근 상회 시세 projection
 - `GET /api/v2/fish` — cursor·facets·alias 검색 목록
@@ -190,13 +213,13 @@ CATALOG_V2_ENABLED=true
 PRICE_IMPORT_BULK_ENABLED=true
 SOURCES_ENABLED=true
 PUBLIC_CACHE_ENABLED=true
-# 안정화 배포에서만 17로 고정. V18 contract 승인 뒤 이 변수를 제거한다.
-SPRING_FLYWAY_TARGET=17
+# 운영 승인된 관리자 릴리스는 V20까지 적용한다. 다음 migration은 검증 후 함께 올린다.
+SPRING_FLYWAY_TARGET=20
 ```
 
 > ⚠️ `CLOUDINARY_URL` 또는 32바이트 이상의 `IMAGE_UPLOADER_KEY_SECRET`이 없으면 서버가 부팅되지 않습니다(fail-fast). **환경변수를 먼저 넣고 배포**하세요.
 
-### Flyway V15~V18 배포 순서
+### Flyway V15~V20 배포 순서
 
 가격 중복키 변경은 한 번에 적용하지 않습니다.
 
@@ -204,8 +227,9 @@ SPRING_FLYWAY_TARGET=17
 2. V16: hash backfill, 중복 row audit·정리, `NOT NULL`·format check·unique index 적용
 3. V17: 양수 가격·최저≤최고·confidence 0~1 CHECK 검증
 4. 애플리케이션 안정화 기간에는 `SPRING_FLYWAY_TARGET=17` 유지
-5. 백업·복구 훈련, migration dry-run, 구 버전 rollback 불필요를 확인한 뒤 target 제한을 제거하여
-   V18에서 `raw_text` 포함 legacy unique constraint를 제거(contract)
+5. 안정화 확인 뒤 target을 올려 V18의 `raw_text` 포함 legacy unique constraint를 제거(contract)
+6. V19의 검증된 제철 출처를 추가하고, V20에서 관리자 역할과 감사 로그를 추가
+7. 현재 운영은 `SPRING_FLYWAY_TARGET=20`으로 고정하며 다음 migration은 검증 후 명시적으로 올림
 
 이미 적용된 migration 파일과 checksum은 수정하지 않습니다. 문제 발생 시 flag/애플리케이션을
 되돌리고 새 forward-fix migration을 추가합니다. 운영 DB를 과거 dump로 덮어 배포를 롤백하지

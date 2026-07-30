@@ -16,14 +16,17 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter;
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
             RateLimitFilter rateLimitFilter,
-            RestAuthenticationEntryPoint authenticationEntryPoint) {
+            RestAuthenticationEntryPoint authenticationEntryPoint,
+            RestAccessDeniedHandler accessDeniedHandler) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.rateLimitFilter = rateLimitFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     @Bean
@@ -34,11 +37,15 @@ public class SecurityConfig {
                 // while retaining CSRF protection for any future non-API browser route.
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/actuator/**"))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
-                        // 인증 필수 경로를 최상단에 고정 (아래 permitAll보다 항상 먼저 매칭되도록)
-                        .requestMatchers("/api/v1/auth/me", "/api/v1/me/**").authenticated()
+                        // 브라우저의 CORS 사전 요청은 실제 권한 검사보다 먼저 통과시킨다.
                         .requestMatchers(HttpMethod.OPTIONS, "/api/v1/**", "/api/v2/**").permitAll()
+                        // 인증 필수 경로를 공개 API 규칙보다 먼저 매칭한다.
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/auth/me", "/api/v1/me/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/integrations/telegram/price-updates").permitAll()
                         // 공개 GET은 광역(/api/v1/**) 대신 필요한 경로만 명시 (신규 GET 기본 공개 방지)

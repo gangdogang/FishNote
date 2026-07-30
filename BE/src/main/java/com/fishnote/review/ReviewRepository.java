@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // Page와 달리 count 쿼리를 추가로 날리지 않음 — 총 개수는 집계 쿼리에서 얻는다
     List<Review> findAllByFishId(Long fishId, Pageable pageable);
+
+    @EntityGraph(attributePaths = "fish")
+    List<Review> findAllByOrderByCreatedAtDescIdDesc(Pageable pageable);
 
     long countByFishId(Long fishId);
 

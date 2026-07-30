@@ -2,6 +2,7 @@ package com.fishnote.fish;
 
 import com.fishnote.fish.dto.FishSuggestionCandidate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface FishAliasRepository extends JpaRepository<FishAlias, Long> {
+
+    Optional<FishAlias> findFirstByAliasIgnoreCase(String alias);
 
     @EntityGraph(attributePaths = "fish")
     @Query("select a from FishAlias a")

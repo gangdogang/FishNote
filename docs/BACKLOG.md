@@ -1,8 +1,9 @@
 # FishNote — 백로그
 
 > 살아있는 문서. 설계 전에 여기서 우선순위를 정하고, 착수하면 `docs/NN_*.md` 설계서로 승격한다.
-> 마지막 정리: 2026-07-23 — Phase 5 품질 구현(Q0~F6/B1~B4), Flyway V8~V18,
-> 26종 대표 이미지 manifest, 출처/제보, cursor API, 홈 집계, 캐시·readiness·prerender까지 반영.
+> 마지막 정리: 2026-07-30 — Phase 5 품질 구현(Q0~F6/B1~B4), Flyway V8~V20,
+> 26종 대표 이미지 manifest, 출처/제보, 관리자 1차 운영판, cursor API, 홈 집계,
+> 캐시·readiness·prerender까지 반영.
 > Docker·staging·운영 백업/restore·성능 실측은 아래 미완료 항목으로 분리한다.
 
 ---
@@ -69,10 +70,13 @@
 - 사진 수급: 공개 자료(docs/08 부록 A 가이드) + Cloudinary 변환으로 톤 통일
 - data.sql 관리 한계 도달 시점 → 7번(관리자)과 연계
 
-### 7. 관리자 페이지
-- 생선 등록/수정 UI (지금은 data.sql 수정 → push가 유일한 방법)
-- users에 `role` 컬럼 (ADMIN) — 인증 기반 위에 올림
-- 대상: 생선 CRUD, 사진 업로드(기존 /images 재사용), featured 토글, 후기 관리(신고 삭제)
+### 7. 관리자 페이지 — 1차 운영판 ✅
+- [x] users `role`(USER/ADMIN), 서버 권한 검사, 안전한 수동 승격 스크립트
+- [x] 생선 등록/수정 UI, 제철·맛 태그·팁·별칭·기본 이미지 URL, featured 관리
+- [x] 오류 제보 처리·재열기, 후기 관리자 삭제, 관리자 작업 감사 로그
+- [ ] 도감 이미지 전용 Cloudinary 업로드·메타데이터(alt/credit/license/focal point) 편집
+- [ ] `fish_source` 주장별 출처 편집 UI
+- 물리 삭제는 후기·시세·북마크 연관 데이터 손실 위험 때문에 제공하지 않음
 
 ### 8. 작은 개선 묶음
 - [x] 이름·영문명·시장 별칭 검색과 `/fish/suggestions` 자동완성

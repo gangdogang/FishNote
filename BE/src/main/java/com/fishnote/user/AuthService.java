@@ -124,7 +124,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getNickname(),
-                user.getPasswordHash() != null);
+                user.getPasswordHash() != null,
+                user.getRole());
     }
 
     private String normalizeEmail(String email) {

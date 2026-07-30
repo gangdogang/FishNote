@@ -10,6 +10,7 @@ export interface AuthUser {
   email: string | null;
   nickname: string;
   hasPassword: boolean;
+  role: 'USER' | 'ADMIN';
 }
 
 export interface LoginRequest {
