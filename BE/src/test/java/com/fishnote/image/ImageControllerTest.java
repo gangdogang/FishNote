@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fishnote.common.RateLimitFilter;
 import com.fishnote.common.ClientIpResolver;
 import com.fishnote.image.dto.ImageUploadResponse;
+import com.fishnote.security.AuthenticatedUserLoader;
 import com.fishnote.security.JwtTokenProvider;
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -47,6 +48,9 @@ class ImageControllerTest {
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private AuthenticatedUserLoader authenticatedUserLoader;
 
     @MockitoBean
     private RateLimitFilter rateLimitFilter;
