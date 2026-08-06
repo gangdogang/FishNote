@@ -116,12 +116,13 @@ public class ImageAssetCleanupPersistenceService {
             case PENDING -> !asset.getExpiresAt().isAfter(now);
             case UPLOADING -> !asset.getExpiresAt().isAfter(uploadingBefore);
             case DELETE_PENDING -> asset.getReview() == null
+                    && asset.getTastingEntry() == null
                     && (asset.getDeletionClaimId() == null
                             ? asset.getCleanupAvailableAt() == null
                                     || !asset.getCleanupAvailableAt().isAfter(now)
                             : asset.getUpdatedAt() != null
                                     && !asset.getUpdatedAt().isAfter(staleBefore));
-            case ATTACHED -> asset.getReview() == null;
+            case ATTACHED -> asset.getReview() == null && asset.getTastingEntry() == null;
         };
     }
 

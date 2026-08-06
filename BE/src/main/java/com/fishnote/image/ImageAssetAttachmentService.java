@@ -1,6 +1,7 @@
 package com.fishnote.image;
 
 import com.fishnote.review.Review;
+import com.fishnote.tasting.TastingEntry;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
@@ -66,6 +67,39 @@ public class ImageAssetAttachmentService {
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
+    public String attachToTasting(
+            UUID assetId,
+            String requestedUrl,
+            String uploaderKey,
+            TastingEntry tastingEntry) {
+        boolean hasUrl = StringUtils.hasText(requestedUrl);
+        if (assetId == null && !hasUrl) {
+            return null;
+        }
+        if ((hasUrl && requestedUrl.length() > 1_000)
+                || !StringUtils.hasText(uploaderKey)
+                || tastingEntry == null
+                || tastingEntry.getId() == null) {
+            throw invalidAsset();
+        }
+
+        ReviewImageAsset asset = assetId == null
+                ? repository.findBySecureUrlForUpdate(requestedUrl).orElseThrow(ImageAssetAttachmentService::invalidAsset)
+                : repository.findByIdForUpdate(assetId).orElseThrow(ImageAssetAttachmentService::invalidAsset);
+        OffsetDateTime now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+        if (asset.getStatus() != ReviewImageAssetStatus.PENDING
+                || !asset.getExpiresAt().isAfter(now)
+                || !constantTimeEquals(asset.getUploaderKey(), uploaderKey)
+                || (hasUrl && !requestedUrl.equals(asset.getSecureUrl()))) {
+            throw invalidAsset();
+        }
+
+        asset.attach(tastingEntry, now);
+        repository.saveAndFlush(asset);
+        return asset.getSecureUrl();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
     public void queueReviewImageDeletion(Long reviewId) {
         if (reviewId == null) {
             return;
@@ -73,6 +107,18 @@ public class ImageAssetAttachmentService {
         repository.findByReviewIdForUpdate(reviewId).ifPresent(asset -> {
             OffsetDateTime now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
             asset.markAttachedReviewDeleted(now);
+            repository.saveAndFlush(asset);
+        });
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void queueTastingImageDeletion(Long entryId) {
+        if (entryId == null) {
+            return;
+        }
+        repository.findByTastingEntryIdForUpdate(entryId).ifPresent(asset -> {
+            OffsetDateTime now = OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
+            asset.markAttachedTastingDeleted(now);
             repository.saveAndFlush(asset);
         });
     }

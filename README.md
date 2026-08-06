@@ -33,6 +33,9 @@ cd BE && ./gradlew bootRun        # http://localhost:8080
 cd BE && SPRING_PROFILES_ACTIVE=test ./gradlew bootTestRun
 ```
 
+화면 점검용 최소 카탈로그가 필요하면 `APP_DEV_SEED=true`를 함께 지정합니다. 이 시드는
+`src/test` 런타임에만 존재하며 운영 빌드에는 포함되지 않습니다.
+
 환경변수 (없으면 해당 기능만 비활성/부팅 실패):
 
 ```text
@@ -61,7 +64,7 @@ CATALOG_V2_ENABLED=true                               # /api/v2/fish 공개 여�
 PRICE_IMPORT_BULK_ENABLED=true                        # false면 webhook당 최대 50행 legacy persist 경로
 SOURCES_ENABLED=true                                  # 출처 API 공개 여부
 PUBLIC_CACHE_ENABLED=true                             # false면 Caffeine 비활성 + public 응답 no-store
-SPRING_FLYWAY_TARGET=20                               # 운영 승인된 최신 migration까지 명시적으로 고정
+SPRING_FLYWAY_TARGET=21                               # 먹어본 기록을 포함한 운영 승인 migration
 ```
 
 빠른 단위 테스트는 H2를 사용하고, 실제 PostgreSQL/Flyway·동시성·쿼리 예산 계약은
@@ -163,6 +166,7 @@ Base URL: `/api/v1`, `/api/v2` — 상세 명세는 [`docs/04_API명세.md`](doc
 - `GET /fish/{id}/reviews` · `POST /fish/{id}/reviews` — 후기 (익명 + 삭제용 비밀번호)
 - `DELETE /reviews/{id}` · `POST /reviews/{id}/helpful`
 - `GET/PUT/DELETE /me/bookmarks` · `POST /me/bookmarks/merge` — 회원 내 도감
+- `GET/POST /me/tastings` · `PUT/DELETE /me/tastings/{id}` — 회원 전용 먹어본 기록
 - `DELETE /auth/me` — 비밀번호 확인 후 회원 탈퇴
 - `POST /auth/kakao` — 카카오 인가 코드 검증 후 FishNote JWT 발급
 - `POST /images` — 후기 사진 업로드 (Cloudinary 경유, JPEG/PNG/정적 GIF/정적 WebP, 5MB·8192px·50MP 이하, `assetId`·만료시각 반환)
@@ -213,13 +217,13 @@ CATALOG_V2_ENABLED=true
 PRICE_IMPORT_BULK_ENABLED=true
 SOURCES_ENABLED=true
 PUBLIC_CACHE_ENABLED=true
-# 운영 승인된 관리자 릴리스는 V20까지 적용한다. 다음 migration은 검증 후 함께 올린다.
-SPRING_FLYWAY_TARGET=20
+# 먹어본 기록 릴리스는 V21까지 적용한다. 다음 migration은 검증 후 함께 올린다.
+SPRING_FLYWAY_TARGET=21
 ```
 
 > ⚠️ `CLOUDINARY_URL` 또는 32바이트 이상의 `IMAGE_UPLOADER_KEY_SECRET`이 없으면 서버가 부팅되지 않습니다(fail-fast). **환경변수를 먼저 넣고 배포**하세요.
 
-### Flyway V15~V20 배포 순서
+### Flyway V15~V21 배포 순서
 
 가격 중복키 변경은 한 번에 적용하지 않습니다.
 
@@ -229,7 +233,8 @@ SPRING_FLYWAY_TARGET=20
 4. 애플리케이션 안정화 기간에는 `SPRING_FLYWAY_TARGET=17` 유지
 5. 안정화 확인 뒤 target을 올려 V18의 `raw_text` 포함 legacy unique constraint를 제거(contract)
 6. V19의 검증된 제철 출처를 추가하고, V20에서 관리자 역할과 감사 로그를 추가
-7. 현재 운영은 `SPRING_FLYWAY_TARGET=20`으로 고정하며 다음 migration은 검증 후 명시적으로 올림
+7. V21에서 회원 전용 먹어본 기록과 기존 이미지 자산 연결을 추가
+8. 현재 운영은 애플리케이션과 V21을 함께 배포하고 `SPRING_FLYWAY_TARGET=21`로 고정하며, 다음 migration은 검증 후 명시적으로 올림
 
 이미 적용된 migration 파일과 checksum은 수정하지 않습니다. 문제 발생 시 flag/애플리케이션을
 되돌리고 새 forward-fix migration을 추가합니다. 운영 DB를 과거 dump로 덮어 배포를 롤백하지

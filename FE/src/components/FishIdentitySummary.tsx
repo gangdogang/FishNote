@@ -1,4 +1,4 @@
-import { ArrowLeft, Heart, Share2 } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, Heart, Scale, Share2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { formatMonths, formatPriceLevel, isInSeasonNow } from '../lib/format';
 import type { FishDetail, FishPriceObservation, FishPriceSummary } from '../types/fish';
@@ -12,6 +12,8 @@ interface FishIdentitySummaryProps {
   onBack: () => void;
   onToggleBookmark: () => void;
   onShare: () => void;
+  onAddTasting?: () => void;
+  onCompare?: () => void;
   verification?: ReactNode;
   className?: string;
 }
@@ -25,6 +27,8 @@ export default function FishIdentitySummary({
   onBack,
   onToggleBookmark,
   onShare,
+  onAddTasting,
+  onCompare,
   verification,
   className = '',
 }: FishIdentitySummaryProps) {
@@ -93,6 +97,30 @@ export default function FishIdentitySummary({
           공유
         </button>
       </div>
+      {onAddTasting || onCompare ? (
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+          {onAddTasting ? (
+            <button
+              type="button"
+              onClick={onAddTasting}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-btn border border-line bg-surface px-3 py-2.5 text-body-sm font-bold text-ink transition hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            >
+              <BookOpenCheck className="h-4 w-4" aria-hidden />
+              먹은 기록
+            </button>
+          ) : null}
+          {onCompare ? (
+            <button
+              type="button"
+              onClick={onCompare}
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-btn border border-line bg-surface px-3 py-2.5 text-body-sm font-bold text-ink transition hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            >
+              <Scale className="h-4 w-4" aria-hidden />
+              비교하기
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

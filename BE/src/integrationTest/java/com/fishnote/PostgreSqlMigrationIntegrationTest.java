@@ -365,9 +365,12 @@ class PostgreSqlMigrationIntegrationTest {
                 """,
                 String.class);
 
-        assertThat(columnCount).isEqualTo(16);
+        assertThat(columnCount).isEqualTo(17);
         assertThat(constraints)
-                .contains("ck_review_image_asset_status", "ck_review_image_asset_state");
+                .contains(
+                        "ck_review_image_asset_status",
+                        "ck_review_image_asset_state",
+                        "uq_review_image_asset_tasting_entry");
         assertThat(cleanupIndex)
                 .contains("cleanup_available_at", "id")
                 .contains("DELETE_PENDING")

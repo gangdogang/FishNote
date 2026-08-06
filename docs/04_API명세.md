@@ -19,6 +19,8 @@
 | POST | `/reviews/{id}/helpful` | 도움돼요 (회원 또는 익명 식별자별 1회) |
 | DELETE | `/auth/me` | 현재 비밀번호 확인 후 회원 탈퇴 |
 | POST | `/auth/kakao` | 카카오 인가 코드 교환 후 FishNote JWT 발급 |
+| GET/POST | `/me/tastings` | 회원 전용 먹어본 기록 조회·작성 |
+| PUT/DELETE | `/me/tastings/{id}` | 본인 먹어본 기록 수정·삭제 |
 | GET | `/fish/suggestions` | 이름·영문명·시장 별칭 자동완성 |
 | GET | `/fish/{id|slug}/sources` | 주장별 출처·검증 상태 |
 | POST | `/fish/{id}/corrections` | 오류 제보(202) |
@@ -636,3 +638,33 @@ price key만 무효화한다. 캐시는 process-local 최적화이며 source of 
 도감 등록·수정, 제보 상태 변경, 후기 삭제는 `admin_audit_log`에 작업자·대상·요약·시각을 남긴다.
 도감 수정 commit 후 catalog/detail/home 서버 캐시를 모두 무효화한다. 이름·slug·전역 normalized
 별칭 충돌은 409이며, 횟감 물리 삭제 API는 제공하지 않는다.
+
+## 17. 회원 먹어본 기록 API
+
+`/api/v1/me/tastings/**`는 Bearer 인증이 필요하며 모든 조회·수정·삭제는 현재 사용자 소유 범위로
+제한한다. 장소와 메모는 공개 후기 응답에 섞지 않는 비공개 데이터다.
+
+- `GET /me/tastings?page=0&size=24`: 먹은 날짜·id 내림차순 페이지와 전체/어종/이번 달 통계
+- `POST /me/tastings`: 새 기록 작성(201)
+- `PUT /me/tastings/{id}`: 본인 기록 전체 수정
+- `DELETE /me/tastings/{id}`: 본인 기록과 연결 사진 삭제 대기 처리(204)
+
+작성·수정 body:
+
+```json
+{
+  "fishId": 1,
+  "tastedOn": "2026-08-06",
+  "rating": 5,
+  "preparation": "RAW",
+  "placeName": "노량진 ○○수산",
+  "note": "담백하고 쫄깃했어요",
+  "imageUrl": "https://res.cloudinary.com/...",
+  "imageAssetId": "ab4fd622-a3b6-45cc-bf73-b1f2ff45b76d"
+}
+```
+
+`tastedOn`은 오늘 이전, `rating`은 null 또는 1~5, `preparation`은
+`RAW/AGED/SEKKOSI/OTHER`다. `placeName`은 100자, `note`는 500자까지 허용한다.
+사진은 기존 `POST /images` 업로드 응답의 URL과 자산 id를 함께 전달하며, 서버가 업로더 소유권과
+만료 상태를 다시 검증한 뒤 기록에 연결한다.

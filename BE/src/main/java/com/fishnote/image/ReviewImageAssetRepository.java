@@ -23,6 +23,10 @@ public interface ReviewImageAssetRepository extends JpaRepository<ReviewImageAss
     @Query("select asset from ReviewImageAsset asset where asset.review.id = :reviewId")
     Optional<ReviewImageAsset> findByReviewIdForUpdate(@Param("reviewId") Long reviewId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select asset from ReviewImageAsset asset where asset.tastingEntry.id = :entryId")
+    Optional<ReviewImageAsset> findByTastingEntryIdForUpdate(@Param("entryId") Long entryId);
+
     @Query(value = """
             SELECT *
             FROM review_image_asset
@@ -30,7 +34,7 @@ public interface ReviewImageAssetRepository extends JpaRepository<ReviewImageAss
                OR (status = 'UPLOADING' AND expires_at <= :uploadingBefore)
                OR (status = 'DELETE_PENDING' AND deletion_claim_id IS NULL
                    AND (cleanup_available_at IS NULL OR cleanup_available_at <= :now))
-               OR (status = 'ATTACHED' AND review_id IS NULL)
+               OR (status = 'ATTACHED' AND review_id IS NULL AND tasting_entry_id IS NULL)
                OR (status = 'DELETE_PENDING' AND deletion_claim_id IS NOT NULL
                    AND updated_at <= :staleBefore)
             ORDER BY COALESCE(cleanup_available_at, expires_at) ASC, id ASC

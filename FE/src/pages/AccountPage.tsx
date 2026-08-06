@@ -113,7 +113,7 @@ export default function AccountPage() {
       <section className="mt-6 rounded-card border border-red-200 dark:border-red-900 bg-surface p-5 sm:p-6">
         <h2 className="mb-2 mt-0 text-18 font-extrabold text-red-700 dark:text-red-400">회원 탈퇴</h2>
         <p className="mb-5 mt-0 text-[13.5px] leading-[1.7] text-ink-mute">
-          저장한 도감과 계정 정보는 삭제됩니다. 작성한 후기는 작성자 정보와 분리되어 익명으로 남을 수 있으니, 원하지 않는 후기는 먼저 삭제해 주세요.
+          저장한 도감, 먹어본 기록과 계정 정보는 삭제됩니다. 작성한 후기는 작성자 정보와 분리되어 익명으로 남을 수 있으니, 원하지 않는 후기는 먼저 삭제해 주세요.
         </p>
 
         <form onSubmit={handleDelete} className="grid gap-4" noValidate aria-busy={deleteAccountMutation.isPending}>
