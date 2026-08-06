@@ -1,6 +1,7 @@
 package com.fishnote.image;
 
 import com.fishnote.review.Review;
+import com.fishnote.tasting.TastingEntry;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -29,7 +30,8 @@ import org.hibernate.annotations.UpdateTimestamp;
                 columnList = "status, cleanup_available_at, id"),
         uniqueConstraints = {
             @UniqueConstraint(name = "uq_review_image_asset_public_id", columnNames = "public_id"),
-            @UniqueConstraint(name = "uq_review_image_asset_review", columnNames = "review_id")
+            @UniqueConstraint(name = "uq_review_image_asset_review", columnNames = "review_id"),
+            @UniqueConstraint(name = "uq_review_image_asset_tasting_entry", columnNames = "tasting_entry_id")
         })
 @Getter
 @NoArgsConstructor
@@ -82,6 +84,11 @@ public class ReviewImageAsset {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     private Review review;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tasting_entry_id", unique = true)
+    @OnDelete(action = OnDeleteAction.SET_NULL)
+    private TastingEntry tastingEntry;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -130,6 +137,22 @@ public class ReviewImageAsset {
             throw new IllegalStateException("대기 중인 이미지 자산만 후기에 첨부할 수 있습니다.");
         }
         this.review = review;
+        this.tastingEntry = null;
+        this.attachedAt = attachedAt;
+        this.deletionClaimId = null;
+        this.cleanupAvailableAt = null;
+        this.cleanupAttempts = 0;
+        this.cleanupOriginStatus = null;
+        this.cleanupNotFoundSafeAt = null;
+        this.status = ReviewImageAssetStatus.ATTACHED;
+    }
+
+    void attach(TastingEntry tastingEntry, OffsetDateTime attachedAt) {
+        if (status != ReviewImageAssetStatus.PENDING) {
+            throw new IllegalStateException("대기 중인 이미지 자산만 먹어본 기록에 첨부할 수 있습니다.");
+        }
+        this.review = null;
+        this.tastingEntry = tastingEntry;
         this.attachedAt = attachedAt;
         this.deletionClaimId = null;
         this.cleanupAvailableAt = null;
@@ -152,6 +175,7 @@ public class ReviewImageAsset {
         }
         ReviewImageAssetStatus previousStatus = status;
         this.review = null;
+        this.tastingEntry = null;
         this.deletionClaimId = null;
         this.cleanupAvailableAt = availableAt;
         if (previousStatus != ReviewImageAssetStatus.DELETE_PENDING) {
@@ -180,6 +204,22 @@ public class ReviewImageAsset {
         this.status = ReviewImageAssetStatus.DELETE_PENDING;
     }
 
+    void markAttachedTastingDeleted(OffsetDateTime availableAt) {
+        if (availableAt == null) {
+            throw new IllegalArgumentException("이미지 자산 정리 가능 시각이 필요합니다.");
+        }
+        if (status != ReviewImageAssetStatus.ATTACHED || tastingEntry == null) {
+            throw new IllegalStateException("먹어본 기록에 첨부된 이미지 자산만 분리할 수 있습니다.");
+        }
+        this.tastingEntry = null;
+        this.deletionClaimId = null;
+        this.cleanupAvailableAt = availableAt;
+        this.cleanupAttempts = 0;
+        this.cleanupOriginStatus = ReviewImageAssetStatus.ATTACHED;
+        this.cleanupNotFoundSafeAt = null;
+        this.status = ReviewImageAssetStatus.DELETE_PENDING;
+    }
+
     void claimDeletion(
             UUID claimId,
             OffsetDateTime claimedAt,
@@ -187,7 +227,7 @@ public class ReviewImageAsset {
         if (claimId == null || claimedAt == null) {
             throw new IllegalArgumentException("이미지 자산 삭제 claim 정보가 필요합니다.");
         }
-        if (review != null
+        if ((review != null || tastingEntry != null)
                 || (status != ReviewImageAssetStatus.UPLOADING
                         && status != ReviewImageAssetStatus.PENDING
                         && status != ReviewImageAssetStatus.DELETE_PENDING)) {

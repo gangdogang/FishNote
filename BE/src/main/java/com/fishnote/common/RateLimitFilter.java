@@ -52,6 +52,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             new Rule("DELETE", Pattern.compile("/api/v1/reviews/[^/]+"), 10, "review-delete"),
             new Rule("POST", Pattern.compile("/api/v1/reviews/[^/]+/helpful"), 60, "helpful"),
             new Rule("POST", Pattern.compile("/api/v1/images"), 20, "image-upload"),
+            new Rule("POST", Pattern.compile("/api/v1/me/tastings"), 30, "tasting-write"),
+            new Rule("PUT", Pattern.compile("/api/v1/me/tastings/[^/]+"), 60, "tasting-update"),
+            new Rule("DELETE", Pattern.compile("/api/v1/me/tastings/[^/]+"), 30, "tasting-delete"),
             new Rule("POST", Pattern.compile("/api/v1/auth/(login|signup|kakao)"), 20, "auth"));
 
     private final boolean enabled;

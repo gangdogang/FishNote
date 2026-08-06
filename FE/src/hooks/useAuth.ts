@@ -9,6 +9,7 @@ import {
 } from '../api/auth';
 import type { AuthResponse, KakaoLoginRequest, LoginRequest, SignupRequest } from '../api/auth';
 import { bookmarksMeQueryKey } from '../api/bookmarks';
+import { tastingQueryKey } from '../api/tastings';
 import {
   ACCESS_TOKEN_CHANGE_EVENT,
   ACCESS_TOKEN_STORAGE_KEY,
@@ -37,6 +38,7 @@ function useAuthState() {
       // Review payloads contain viewer-specific fields (`mine`, `viewerHelpful`).
       // Never reuse an anonymous/previous-viewer response across an auth boundary.
       queryClient.removeQueries({ queryKey: ['reviews'] });
+      queryClient.removeQueries({ queryKey: tastingQueryKey });
       if (!nextAccessToken) {
         queryClient.removeQueries({ queryKey: authMeQueryKey });
         queryClient.removeQueries({ queryKey: bookmarksMeQueryKey });

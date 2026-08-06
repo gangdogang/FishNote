@@ -18,6 +18,9 @@ const SourcesPage = lazy(() => import('./pages/SourcesPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const RecommendationPage = lazy(() => import('./pages/RecommendationPage'));
+const ComparePage = lazy(() => import('./pages/ComparePage'));
+const TastingJournalPage = lazy(() => import('./pages/TastingJournalPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function RouteFallback() {
@@ -49,6 +52,9 @@ export default function App() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/recommend" element={<RecommendationPage />} />
+            <Route path="/compare" element={<ComparePage />} />
+            <Route path="/tastings" element={<TastingJournalPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

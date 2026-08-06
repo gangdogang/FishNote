@@ -262,6 +262,8 @@ function FishDetailPageContent({ identifier }: { identifier: string }) {
           onBack={() => (canGoBack ? navigate(-1) : navigate('/'))}
           onToggleBookmark={() => toggleBookmark(fish.id)}
           onShare={() => void handleShare()}
+          onAddTasting={() => navigate(`/tastings?fish=${fish.id}`)}
+          onCompare={() => navigate(`/compare?fish=${fish.id}`)}
           verification={(
             <VerificationSummary
               summary={sourceData?.summary}

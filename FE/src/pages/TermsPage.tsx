@@ -6,7 +6,7 @@ export default function TermsPage() {
 
   return (
     <InfoPageLayout
-      eyebrow="시행일 2026년 7월 13일"
+      eyebrow="시행일 2026년 8월 6일"
       title="이용약관"
       description="FishNote를 안전하고 즐겁게 이용하기 위해 필요한 기본 규칙입니다."
     >
@@ -28,6 +28,10 @@ export default function TermsPage() {
           <li>광고, 반복 게시, 비방, 불법 콘텐츠, 서비스와 무관한 내용은 제한되거나 삭제될 수 있습니다.</li>
           <li>업로드한 사진과 글을 게시할 권한이 작성자에게 있어야 합니다.</li>
         </ul>
+      </InfoSection>
+
+      <InfoSection title="먹어본 기록">
+        <p>먹어본 기록은 로그인한 이용자에게만 보이는 개인 기능입니다. 장소나 메모에 타인의 개인정보를 입력하지 말고, 직접 촬영했거나 사용할 권한이 있는 사진만 올려 주세요.</p>
       </InfoSection>
 
       <InfoSection title="계정과 서비스 변경">

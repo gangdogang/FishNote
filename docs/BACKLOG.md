@@ -1,7 +1,7 @@
 # FishNote — 백로그
 
 > 살아있는 문서. 설계 전에 여기서 우선순위를 정하고, 착수하면 `docs/NN_*.md` 설계서로 승격한다.
-> 마지막 정리: 2026-07-30 — Phase 5 품질 구현(Q0~F6/B1~B4), Flyway V8~V20,
+> 마지막 정리: 2026-08-06 — Phase 5 품질 구현(Q0~F6/B1~B4), Flyway V8~V21,
 > 26종 대표 이미지 manifest, 출처/제보, 관리자 1차 운영판, cursor API, 홈 집계,
 > 캐시·readiness·prerender까지 반영.
 > Docker·staging·운영 백업/restore·성능 실측은 아래 미완료 항목으로 분리한다.
@@ -113,6 +113,7 @@
 - ✅ Phase 5 BE read/write: v2 cursor/facets, source/correction, atomic helpful/bookmark/OAuth,
   bulk price hash dedup, bounded cache/home/readiness/metrics
 - ✅ Flyway V8~V17 expand/backfill/enforce와 V18 contract 파일 작성
+- ✅ 개인 먹어본 기록(날짜·방식·별점·장소·메모·사진), 취향 기반 오늘 추천, 최대 3종 횟감 비교
 - ✅ FE Chromium/WebKit light/dark resilience matrix 12/12, H2 cache/readiness 2건 자동 검증
 - ⏳ PostgreSQL Testcontainers runtime(Docker), staging/운영 migration dry-run, 실제 백업/restore,
   Vercel Insights·OG, warm p95/LCP는 환경 의존 검증 대기

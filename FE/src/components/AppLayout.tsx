@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { BookOpen, CalendarDays, Heart, Moon, Sun } from 'lucide-react';
+import { BookOpen, BookOpenCheck, CalendarDays, Heart, Moon, Sparkles, Sun } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useAuth } from '../hooks/useAuth';
@@ -30,6 +30,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const catalogActive = normalizedPathname === '/' || /^\/fish\/[^/]+$/.test(normalizedPathname);
   const calendarActive = normalizedPathname === '/calendar';
   const savedActive = normalizedPathname === '/saved';
+  const recommendationActive = normalizedPathname === '/recommend';
+  const compareActive = normalizedPathname === '/compare';
   const showHeaderSearch = normalizedPathname !== '/' || homeHeroVisibility === 'hidden';
   const searchParams = new URLSearchParams(location.search);
   const navClassName = (active: boolean) =>
@@ -134,13 +136,27 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <span className="text-lead font-extrabold leading-none tracking-[-0.025em] text-ink transition-colors group-hover/brand:text-accent">FishNote</span>
             </Link>
 
-            <nav className="hidden min-w-0 flex-1 items-center gap-5.5 md:flex">
+            <nav className="hidden min-w-0 flex-1 items-center gap-4 lg:gap-5 md:flex">
               <Link
                 to="/"
                 aria-current={catalogActive ? 'page' : undefined}
                 className={navClassName(catalogActive)}
               >
                 도감
+              </Link>
+              <Link
+                to="/recommend"
+                aria-current={recommendationActive ? 'page' : undefined}
+                className={navClassName(recommendationActive)}
+              >
+                오늘 추천
+              </Link>
+              <Link
+                to="/compare"
+                aria-current={compareActive ? 'page' : undefined}
+                className={navClassName(compareActive)}
+              >
+                비교
               </Link>
               <Link
                 to="/calendar"
@@ -204,6 +220,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         className="block px-3.5 py-2 text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
                       >
                         저장한 도감
+                      </Link>
+                      <Link
+                        to="/tastings"
+                        onClick={() => setProfileOpen(false)}
+                        className="block px-3.5 py-2 text-body-sm font-semibold text-ink transition hover:bg-mist hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+                      >
+                        먹어본 기록
                       </Link>
                       <Link
                         to="/account"
@@ -316,13 +339,15 @@ function BookmarkCount({ count, active }: { count: number; active: boolean }) {
 function MobileNavigation({ pathname, bookmarkCount }: { pathname: string; bookmarkCount: number }) {
   const items = [
     { to: '/', label: '도감', icon: BookOpen, active: pathname === '/' || /^\/fish\/[^/]+$/.test(pathname) },
+    { to: '/recommend', label: '추천', icon: Sparkles, active: pathname === '/recommend' },
     { to: '/calendar', label: '제철', icon: CalendarDays, active: pathname === '/calendar' },
+    { to: '/tastings', label: '기록', icon: BookOpenCheck, active: pathname === '/tastings' },
     { to: '/saved', label: '저장', icon: Heart, active: pathname === '/saved' },
   ];
 
   return (
     <nav aria-label="모바일 주요 메뉴" className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-surface px-3 pb-[max(6px,var(--safe-area-bottom))] pt-1.5 md:hidden">
-      <div className="mx-auto grid max-w-sm grid-cols-3">
+      <div className="mx-auto grid max-w-md grid-cols-5">
         {items.map(({ to, label, icon: Icon, active }) => (
           <Link
             key={to}
