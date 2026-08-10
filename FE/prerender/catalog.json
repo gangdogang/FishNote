@@ -10,7 +10,7 @@
       12
     ],
     "slug": "gwangeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f0/Paralichthys_olivaceus_Umigatari.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/gwangeo.jpg"
   },
   {
     "id": 2,
@@ -23,7 +23,7 @@
       12
     ],
     "slug": "bangeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/28/Japanese_amberjack_by_Vincent_C_Chen.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/bangeo.jpg"
   },
   {
     "id": 3,
@@ -35,7 +35,7 @@
       6
     ],
     "slug": "ureok",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d9/Sebastes_schlegelii_Muroran.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/ureok.jpg"
   },
   {
     "id": 4,
@@ -47,7 +47,7 @@
       5
     ],
     "slug": "chamdom",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b6/Pagrus_major_ioworld.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/chamdom.jpg"
   },
   {
     "id": 5,
@@ -68,7 +68,7 @@
       12
     ],
     "slug": "yeoneo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2e/Salmo_salar_221451741_%28cropped%29.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/yeoneo.jpg"
   },
   {
     "id": 7,
@@ -80,7 +80,7 @@
       8
     ],
     "slug": "mineo",
-    "imageUrl": "https://www.nifs.go.kr/cmmn/images/MF0003239_DG0115_watermark.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/mineo.jpg"
   },
   {
     "id": 8,
@@ -92,7 +92,7 @@
       8
     ],
     "slug": "nongeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Lateolabrax_japonicus_Iwaki.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/nongeo.jpg"
   },
   {
     "id": 9,
@@ -104,7 +104,7 @@
       11
     ],
     "slug": "jeoneo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/e7/Konosirus_punctatus.JPG"
+    "imageUrl": "https://www.fishnote.kr/fish/jeoneo.jpg"
   },
   {
     "id": 10,
@@ -116,7 +116,7 @@
       5
     ],
     "slug": "dodari",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/16/Pleuronichthys_cornutus_at_Osaka_aquarium.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/dodari.jpg"
   },
   {
     "id": 11,
@@ -130,7 +130,7 @@
       12
     ],
     "slug": "gamseongdom",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Acanthopagrus_schlegelii.JPG"
+    "imageUrl": "https://www.fishnote.kr/fish/gamseongdom.jpg"
   },
   {
     "id": 12,
@@ -142,7 +142,7 @@
       8
     ],
     "slug": "doldom",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Striped_beakfish_Oplegnathus_fasciatus.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/doldom.jpg"
   },
   {
     "id": 13,
@@ -155,7 +155,7 @@
       8
     ],
     "slug": "byeongeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/68/Pampus_argenteus_100969499.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/byeongeo.jpg"
   },
   {
     "id": 14,
@@ -167,7 +167,7 @@
       8
     ],
     "slug": "gaetjangeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Pike_conger.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/gaetjangeo.jpg"
   },
   {
     "id": 15,
@@ -179,7 +179,7 @@
       8
     ],
     "slug": "bungjangeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/d8/Conger_myriaster.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/bungjangeo.jpg"
   },
   {
     "id": 16,
@@ -192,7 +192,7 @@
       12
     ],
     "slug": "gasungeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/6/6c/Liza_haematocheila_by_OpenCage.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/gasungeo.jpg"
   },
   {
     "id": 17,
@@ -205,7 +205,7 @@
       12
     ],
     "slug": "godeungeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/24/Scomber_japonicus_San_Diego.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/godeungeo.jpg"
   },
   {
     "id": 18,
@@ -218,7 +218,7 @@
       10
     ],
     "slug": "galchi",
-    "imageUrl": "https://www.nifs.go.kr/cmmn/images/MF00043931_watermark.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/galchi.jpg"
   },
   {
     "id": 19,
@@ -231,7 +231,7 @@
       6
     ],
     "slug": "sungeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ed/Flathead-mullet-Aquarium-Of-The-Pacific.png"
+    "imageUrl": "https://www.fishnote.kr/fish/sungeo.jpg"
   },
   {
     "id": 20,
@@ -244,7 +244,7 @@
       6
     ],
     "slug": "gajami",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/9/97/Flatfish_%2814670301310%29.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/gajami.jpg"
   },
   {
     "id": 21,
@@ -256,7 +256,7 @@
       8
     ],
     "slug": "bulgbari",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Epinephelus_akaara-2_by_OpenCage.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/bulgbari.jpg"
   },
   {
     "id": 22,
@@ -268,7 +268,7 @@
       11
     ],
     "slug": "neungseongeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/da/Epinephelus_septemfasciatus_Enosui1.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/neungseongeo.jpg"
   },
   {
     "id": 23,
@@ -280,7 +280,7 @@
       8
     ],
     "slug": "jabari",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a4/Epinephelus_bruneus_AQUAS.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/jabari.jpg"
   },
   {
     "id": 24,
@@ -301,7 +301,7 @@
       12
     ],
     "slug": "jeonbok",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1d/Haliotis_discus_hannai_01.JPG"
+    "imageUrl": "https://www.fishnote.kr/fish/jeonbok.jpg"
   },
   {
     "id": 25,
@@ -313,7 +313,7 @@
       8
     ],
     "slug": "shimaaji",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/18/Silver_Trevally_%28Pseudocaranx_dentex%29.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/shimaaji.jpg"
   },
   {
     "id": 26,
@@ -325,7 +325,7 @@
       8
     ],
     "slug": "eoreumdom",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/85/KoshoDI.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/eoreumdom.jpg"
   },
   {
     "id": 27,
@@ -346,6 +346,6 @@
       12
     ],
     "slug": "jeomseongeo",
-    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/dd/Sciaenops_ocellatus_%28FDA_212%29.jpg"
+    "imageUrl": "https://www.fishnote.kr/fish/jeomseongeo.jpg"
   }
 ]

@@ -68,7 +68,8 @@ async function buildCatalog() {
       return {
         ...item,
         slug: media.slug,
-        imageUrl: media.status === 'READY' ? media.url : null,
+        // docs/15 M3: 자체 호스팅 사본을 우선 사용해 prerender/OG의 외부 핫링크를 없앤다
+        imageUrl: media.status === 'READY' ? (media.hosted?.url ?? media.url) : null,
         seasonMonths: [...item.seasonMonths].sort((left, right) => left - right),
       };
     })
