@@ -24,6 +24,7 @@ import type { ReviewRequest, ReviewSort } from '../types/review';
 import type { FishClaimType, FishCorrectionRequest } from '../types/source';
 import { trackAnalyticsEvent } from '../lib/analytics';
 import { isInSeasonNow } from '../lib/format';
+import { shouldHidePriceSection } from '../lib/priceSummary';
 import type { FishDetail } from '../types/fish';
 
 export default function FishDetailPage() {
@@ -249,6 +250,8 @@ function FishDetailPageContent({ identifier }: { identifier: string }) {
   const tasteDescription = fish.tasteDesc ?? fish.description;
   const bookmarked = isBookmarked(fish.id);
   const claim = (claimType: FishClaimType) => sourceData?.claims.find((item) => item.claimType === claimType);
+  // 시세 관측 0건이 확정되면 PriceSection이 null을 반환하므로 탭도 같은 조건으로 숨긴다
+  const priceSectionHidden = shouldHidePriceSection(priceSummary, isPriceError);
 
   return (
     <div className="mx-auto max-w-content px-4 pb-20 pt-7 sm:px-7">
@@ -278,7 +281,7 @@ function FishDetailPageContent({ identifier }: { identifier: string }) {
         <FishMediaGallery fish={fish} className="lg:order-1" />
       </section>
 
-      <DetailSectionNav />
+      <DetailSectionNav hiddenIds={priceSectionHidden ? ['price-section'] : undefined} />
 
       <FishTasteSection
         fishId={fish.id}

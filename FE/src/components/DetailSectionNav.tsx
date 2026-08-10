@@ -10,12 +10,21 @@ const SECTIONS = [
 
 type DetailSectionId = (typeof SECTIONS)[number]['id'];
 
-export default function DetailSectionNav() {
+interface DetailSectionNavProps {
+  /** 페이지에서 렌더하지 않는 섹션의 탭 (예: 시세 0건이면 'price-section') */
+  hiddenIds?: readonly DetailSectionId[];
+}
+
+export default function DetailSectionNav({ hiddenIds }: DetailSectionNavProps) {
+  const sections = SECTIONS.filter(({ id }) => !hiddenIds?.includes(id));
+  const sectionsKey = sections.map(({ id }) => id).join('|');
   const [activeId, setActiveId] = useState<DetailSectionId>(SECTIONS[0].id);
+  const resolvedActiveId = sections.some(({ id }) => id === activeId) ? activeId : sections[0]?.id;
 
   useEffect(() => {
-    const elements = SECTIONS
-      .map(({ id }) => document.getElementById(id))
+    const elements = sectionsKey
+      .split('|')
+      .map((id) => document.getElementById(id))
       .filter((element): element is HTMLElement => element !== null);
     if (elements.length === 0 || typeof IntersectionObserver === 'undefined') return;
 
@@ -30,7 +39,7 @@ export default function DetailSectionNav() {
     );
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, []);
+  }, [sectionsKey]);
 
   return (
     <nav
@@ -38,8 +47,8 @@ export default function DetailSectionNav() {
       className="sticky top-[var(--app-header-height)] z-30 -mx-4 mt-7 border-y border-line bg-mist/95 px-4 backdrop-blur sm:-mx-7 sm:px-7"
     >
       <div className="detail-section-nav-scroll flex gap-1 overflow-x-auto py-1">
-        {SECTIONS.map(({ id, label }) => {
-          const active = activeId === id;
+        {sections.map(({ id, label }) => {
+          const active = resolvedActiveId === id;
           return (
             <a
               key={id}

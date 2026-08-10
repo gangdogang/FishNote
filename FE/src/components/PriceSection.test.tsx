@@ -83,7 +83,7 @@ const summary: FishPriceSummary = {
 };
 
 describe('PriceSection', () => {
-  it('초기 loading/error와 success-empty를 서로 구분하고 retry를 제공한다', async () => {
+  it('초기 loading/error는 복구 UI를 주고 success-empty는 섹션을 렌더하지 않는다', async () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
     const { rerender } = render(
@@ -95,14 +95,15 @@ describe('PriceSection', () => {
     await user.click(screen.getByRole('button', { name: '가격 다시 시도' }));
     expect(onRetry).toHaveBeenCalledOnce();
 
+    // 성공 응답인데 관측 0건이면 빈 선반 대신 섹션 자체를 접는다 (docs/15 M1)
     rerender(
       <PriceSection fishName="광어" summary={emptySummary} isLoading={false} isError={false} onRetry={onRetry} />,
     );
-    expect(screen.getByText('최근 14일 범위에는 수집된 시세가 없습니다')).toBeInTheDocument();
-    expect(screen.queryByText('가격 정보를 불러오지 못했어요.')).not.toBeInTheDocument();
+    expect(screen.queryByText('가격 현황')).not.toBeInTheDocument();
+    expect(screen.queryByText('최근 14일 범위에는 수집된 시세가 없습니다')).not.toBeInTheDocument();
   });
 
-  it('가격 freshness 메타와 variant별 no-data 사유를 구분해 표시한다', () => {
+  it('가격 freshness 메타를 표시하고, empty summary는 stale(refetch 실패)에서만 사유를 노출한다', () => {
     const { rerender } = render(
       <PriceSection fishName="광어" summary={summary} isLoading={false} isError={false} onRetry={vi.fn()} />,
     );
@@ -113,20 +114,22 @@ describe('PriceSection', () => {
     expect(within(freshness).getByText('KRW / kg')).toBeInTheDocument();
     expect(freshness.querySelector('time')).toHaveAttribute('datetime', '2026-07-20T00:00:00Z');
 
-    rerender(
-      <PriceSection
-        fishName="광어"
-        summary={{
-          ...emptySummary,
-          variantKey: '양식|제주|kg',
-          noDataReason: 'VARIANT_NOT_FOUND',
-        }}
-        isLoading={false}
-        isError={false}
-        onRetry={vi.fn()}
-      />,
-    );
+    const variantEmptySummary = {
+      ...emptySummary,
+      variantKey: '양식|제주|kg',
+      noDataReason: 'VARIANT_NOT_FOUND',
+    } as const;
 
+    // 성공 응답이면 variant no-data도 섹션을 렌더하지 않는다
+    rerender(
+      <PriceSection fishName="광어" summary={variantEmptySummary} isLoading={false} isError={false} onRetry={vi.fn()} />,
+    );
+    expect(screen.queryByText('가격 현황')).not.toBeInTheDocument();
+
+    // cached empty summary에서 refetch가 실패하면 복구 UI를 위해 섹션과 사유를 유지한다
+    rerender(
+      <PriceSection fishName="광어" summary={variantEmptySummary} isLoading={false} isError onRetry={vi.fn()} />,
+    );
     expect(screen.getByText('선택 규격 양식 · 제주 · kg')).toBeInTheDocument();
     expect(screen.getByText('선택한 규격(양식 · 제주 · kg)과 일치하는 시세가 없습니다')).toBeInTheDocument();
     expect(screen.queryByText('최근 14일 범위에는 수집된 시세가 없습니다')).not.toBeInTheDocument();
