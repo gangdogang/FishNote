@@ -43,7 +43,7 @@ export default function App() {
             <Route path="/fish/:identifier" element={<FishDetailPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/saved" element={<SavedPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/calendar/:month?" element={<CalendarPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
