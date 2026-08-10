@@ -141,17 +141,23 @@ test.describe('F4 responsive price chart', () => {
   for (const scenario of boundaryScenarios) {
     test(`${scenario.name} never renders NaN or Infinity`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: 320, height: 568 });
-      await openDetailWithPrices(page, testInfo, createPriceSummary(scenario.points));
+      await openDetailWithPrices(page, testInfo, createPriceSummary(scenario.points), {
+        expectPriceSection: !scenario.empty,
+      });
 
       const priceSection = page.locator('#price-section');
-      await expect(priceSection).toBeVisible();
-      await expectNoInvalidSvgValues(priceSection);
 
       if (scenario.empty) {
-        await expect(priceSection.getByText('아직 수집된 시세가 없습니다', { exact: true })).toBeVisible();
-        await expect(priceSection.locator('svg[role="img"]')).toHaveCount(0);
+        // 성공 응답인데 관측 0건이면 차트를 그리지 않고 섹션·탭을 통째로 숨긴다 (docs/15 M1)
+        await expect(priceSection).toHaveCount(0);
+        const sectionNav = page.getByRole('navigation', { name: '횟감 상세 바로가기' });
+        await expect(sectionNav.getByRole('link', { name: '맛·제철' })).toBeVisible();
+        await expect(sectionNav.getByRole('link', { name: '가격' })).toHaveCount(0);
         return;
       }
+
+      await expect(priceSection).toBeVisible();
+      await expectNoInvalidSvgValues(priceSection);
 
       const chart = priceSection.locator('svg[role="img"]');
       await expect(chart).toBeVisible();
@@ -170,6 +176,7 @@ async function openDetailWithPrices(
   page: Page,
   testInfo: TestInfo,
   summary: FishPriceSummary,
+  { expectPriceSection = true } = {},
 ) {
   await applyProjectTheme(page, testInfo);
   await mockPublicApi(page);
@@ -187,7 +194,9 @@ async function openDetailWithPrices(
   });
   await page.goto('/fish/1', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('heading', { level: 1, name: '광어' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: '가격 현황' })).toBeVisible();
+  if (expectPriceSection) {
+    await expect(page.getByRole('heading', { level: 2, name: '가격 현황' })).toBeVisible();
+  }
 }
 
 function createPriceSummary(points: FishPriceTrendPoint[]): FishPriceSummary {
