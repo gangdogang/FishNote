@@ -5,6 +5,7 @@
 > 26종 대표 이미지 manifest, 출처/제보, 관리자 1차 운영판, cursor API, 홈 집계,
 > 캐시·readiness·prerender까지 반영.
 > Docker·staging·운영 백업/restore·성능 실측은 아래 미완료 항목으로 분리한다.
+> 2026-08-10 — 운영 사이트 홍보 준비 감사 → `docs/15_홍보준비_티켓.md`(M1~M6)로 승격.
 
 ---
 
@@ -57,7 +58,17 @@
 - [x] **대표 사진 manifest/seed 26/26**: `config/fish_image_manifest.json`과 V13에 alt·credit·license·
   source URL·원본 크기·focal point·학명을 기록. 가자미는 특정 종이 아닌 가자미류 사진/표기를 사용.
 - [ ] 26개 이미지·26개 원문 URL 응답은 2026-07-25 확인 완료. 실제 배포 crop과
-  외부 원본 장기 지속성을 확인하고 필요 시 자체 CDN으로 이관
+  외부 원본 장기 지속성을 확인하고 필요 시 자체 CDN으로 이관 → **docs/15 M3으로 승격**
+
+### 4.6 홍보 준비 (수익화 1단계 선행) → 설계·티켓: `docs/15_홍보준비_티켓.md`
+2026-08-10 운영 사이트 실측 감사 기반. 순서: 검색·커뮤니티 유입 → 제휴 → 광고.
+
+- [x] M1 — 시세 0건 어종에서 가격 섹션 숨김 (빈 선반 제거, 2026-08-10)
+- [ ] M2 — 제철 캘린더 `/calendar/:month` 딥링크 + prerender/sitemap (SEO 랜딩 12개)
+- [ ] M3 — 22종 nifs 핫링크 이미지 자체 호스팅 이관 (4.5 항목 승계)
+- [ ] M4 — 회(음식) 사진 보강, 인기 4종부터 (입문자 채널 선행 조건)
+- [ ] M5 — 후기 콜드스타트 해소 — 실경험 기반 10~15개 (허위 후기 금지)
+- [ ] M6 — 서치어드바이저/서치콘솔 등록 + 커뮤니티 홍보 실행 (개발자 커뮤니티는 선행 없음, 즉시 가능)
 
 ---
 
@@ -94,7 +105,8 @@
 - [x] SEO build 구현: 26개 slug 상세 prerender, canonical/OG/JSON-LD, API 선택 대조, build-time sitemap
 - [ ] SEO 운영 확인: Vercel preview route/Insights JavaScript 200, OG 이미지 200, 실제 검색엔진 수집
 - [ ] 에러 트래킹(Sentry 무료 티어) + 무료 한도 모니터링(Render/Neon/Cloudinary)
-- [ ] 광고 수익화 (기획서 성공 기준 ③) — 트래픽 확보 후
+- [ ] 광고 수익화 (기획서 성공 기준 ③) — docs/15 M1~M6으로 유입 확보 후 쿠팡 파트너스 → 애드핏/애드센스 순.
+  광고·제휴 부착 시점에 Vercel Hobby 상업적 사용 제한 확인(Pro 전환 또는 FE 호스팅 이전)
 - [ ] 인기 생선 분석 (Vercel Analytics 데이터 활용)
 
 ---
