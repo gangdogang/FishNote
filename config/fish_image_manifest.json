@@ -21,8 +21,16 @@
       "width": 4032,
       "height": 3024,
       "alt": "수족관 바닥에 몸을 붙이고 있는 광어 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.57 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.57
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/gwangeo.jpg",
+        "width": 1280,
+        "height": 960
+      }
     },
     {
       "fishId": 2,
@@ -39,8 +47,16 @@
       "width": 1251,
       "height": 704,
       "alt": "푸른 바다를 헤엄치는 방어 무리",
-      "focalPoint": { "x": 0.52, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.52,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/bangeo.jpg",
+        "width": 1251,
+        "height": 704
+      }
     },
     {
       "fishId": 3,
@@ -57,8 +73,16 @@
       "width": 4032,
       "height": 2268,
       "alt": "수족관을 헤엄치는 검은빛 우럭 한 마리",
-      "focalPoint": { "x": 0.51, "y": 0.51 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.51,
+        "y": 0.51
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/ureok.jpg",
+        "width": 1280,
+        "height": 720
+      }
     },
     {
       "fishId": 4,
@@ -75,8 +99,16 @@
       "width": 6000,
       "height": 4000,
       "alt": "수족관을 헤엄치는 붉은빛 참돔 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/chamdom.jpg",
+        "width": 1280,
+        "height": 853
+      }
     },
     {
       "fishId": 5,
@@ -93,9 +125,17 @@
       "width": 1967,
       "height": 843,
       "alt": "옆모습으로 촬영된 대서양연어 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
       "commercialUseConfirmed": true,
-      "taxonomyNote": "국내 유통 설명에 맞춰 대서양연어로 식별"
+      "taxonomyNote": "국내 유통 설명에 맞춰 대서양연어로 식별",
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/yeoneo.jpg",
+        "width": 1280,
+        "height": 548
+      }
     },
     {
       "fishId": 7,
@@ -112,8 +152,16 @@
       "width": 1383,
       "height": 706,
       "alt": "흰 배경에 놓인 은빛 민어 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/mineo.jpg",
+        "width": 1280,
+        "height": 653
+      }
     },
     {
       "fishId": 8,
@@ -130,8 +178,16 @@
       "width": 3601,
       "height": 1695,
       "alt": "수족관을 헤엄치는 은빛 농어 한 마리",
-      "focalPoint": { "x": 0.51, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.51,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/nongeo.jpg",
+        "width": 1280,
+        "height": 602
+      }
     },
     {
       "fishId": 9,
@@ -148,8 +204,16 @@
       "width": 2272,
       "height": 1704,
       "alt": "옆으로 놓인 은빛 전어 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.52 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.52
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/jeoneo.jpg",
+        "width": 1280,
+        "height": 960
+      }
     },
     {
       "fishId": 10,
@@ -166,8 +230,16 @@
       "width": 3767,
       "height": 2549,
       "alt": "수족관 바닥에 붙어 있는 도다리 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.58 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.58
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/dodari.jpg",
+        "width": 1280,
+        "height": 866
+      }
     },
     {
       "fishId": 11,
@@ -184,8 +256,16 @@
       "width": 3648,
       "height": 2736,
       "alt": "낚시로 잡은 검은빛 감성돔 한 마리",
-      "focalPoint": { "x": 0.49, "y": 0.53 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.49,
+        "y": 0.53
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/gamseongdom.jpg",
+        "width": 1280,
+        "height": 960
+      }
     },
     {
       "fishId": 12,
@@ -202,8 +282,16 @@
       "width": 799,
       "height": 800,
       "alt": "검은 세로줄 무늬가 선명한 돌돔 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/doldom.jpg",
+        "width": 799,
+        "height": 800
+      }
     },
     {
       "fishId": 13,
@@ -220,8 +308,16 @@
       "width": 2048,
       "height": 1533,
       "alt": "납작하고 은빛을 띠는 병어 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.52 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.52
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/byeongeo.jpg",
+        "width": 1280,
+        "height": 958
+      }
     },
     {
       "fishId": 14,
@@ -238,8 +334,16 @@
       "width": 4032,
       "height": 2230,
       "alt": "수족관에서 긴 몸을 뻗고 있는 갯장어",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/gaetjangeo.jpg",
+        "width": 1280,
+        "height": 708
+      }
     },
     {
       "fishId": 15,
@@ -256,8 +360,16 @@
       "width": 1000,
       "height": 1000,
       "alt": "바위 사이에 몸을 굽힌 붕장어",
-      "focalPoint": { "x": 0.5, "y": 0.52 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.52
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/bungjangeo.jpg",
+        "width": 1000,
+        "height": 1000
+      }
     },
     {
       "fishId": 16,
@@ -274,9 +386,17 @@
       "width": 2001,
       "height": 1287,
       "alt": "수조에서 옆모습으로 헤엄치는 가숭어",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
       "commercialUseConfirmed": true,
-      "taxonomyNote": "Commons 파일의 구명 Liza haematocheila는 현행명 Planiliza haematocheilus의 동종이명"
+      "taxonomyNote": "Commons 파일의 구명 Liza haematocheila는 현행명 Planiliza haematocheilus의 동종이명",
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/gasungeo.jpg",
+        "width": 1280,
+        "height": 823
+      }
     },
     {
       "fishId": 17,
@@ -293,8 +413,16 @@
       "width": 3721,
       "height": 2377,
       "alt": "잡았다가 방류한 고등어의 옆모습",
-      "focalPoint": { "x": 0.5, "y": 0.48 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.48
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/godeungeo.jpg",
+        "width": 1280,
+        "height": 817
+      }
     },
     {
       "fishId": 18,
@@ -311,8 +439,16 @@
       "width": 3072,
       "height": 2304,
       "alt": "흰 배경에 길게 놓인 은빛 갈치 한 마리",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/galchi.jpg",
+        "width": 1280,
+        "height": 960
+      }
     },
     {
       "fishId": 19,
@@ -329,8 +465,16 @@
       "width": 6000,
       "height": 4000,
       "alt": "수조에서 헤엄치는 숭어",
-      "focalPoint": { "x": 0.5, "y": 0.48 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.48
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/sungeo.jpg",
+        "width": 1280,
+        "height": 853
+      }
     },
     {
       "fishId": 20,
@@ -347,8 +491,16 @@
       "width": 3035,
       "height": 2043,
       "alt": "수산시장에 놓인 여러 마리의 가자미류",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/gajami.jpg",
+        "width": 1280,
+        "height": 861
+      }
     },
     {
       "fishId": 21,
@@ -365,8 +517,16 @@
       "width": 2736,
       "height": 2736,
       "alt": "수조 속 붉은 반점 무늬의 붉바리",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/bulgbari.jpg",
+        "width": 1280,
+        "height": 1280
+      }
     },
     {
       "fishId": 22,
@@ -383,9 +543,17 @@
       "width": 4032,
       "height": 1822,
       "alt": "수조에서 헤엄치는 줄무늬 능성어",
-      "focalPoint": { "x": 0.5, "y": 0.48 },
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.48
+      },
       "commercialUseConfirmed": true,
-      "taxonomyNote": "Commons 파일의 구명 Epinephelus septemfasciatus는 현행명 Hyporthodus septemfasciatus의 동종이명"
+      "taxonomyNote": "Commons 파일의 구명 Epinephelus septemfasciatus는 현행명 Hyporthodus septemfasciatus의 동종이명",
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/neungseongeo.jpg",
+        "width": 1280,
+        "height": 578
+      }
     },
     {
       "fishId": 23,
@@ -402,8 +570,16 @@
       "width": 4032,
       "height": 3024,
       "alt": "수조 속 갈색 무늬 자바리의 옆모습",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/jabari.jpg",
+        "width": 1280,
+        "height": 960
+      }
     },
     {
       "fishId": 24,
@@ -420,9 +596,17 @@
       "width": 7500,
       "height": 5216,
       "alt": "검은 배경에 놓인 참전복 껍데기의 여러 방향 모습",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
       "commercialUseConfirmed": true,
-      "taxonomyNote": "완도전복 별칭과 국내 양식 설명에 맞춰 참전복으로 식별"
+      "taxonomyNote": "완도전복 별칭과 국내 양식 설명에 맞춰 참전복으로 식별",
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/jeonbok.jpg",
+        "width": 1280,
+        "height": 890
+      }
     },
     {
       "fishId": 25,
@@ -439,8 +623,16 @@
       "width": 4938,
       "height": 3209,
       "alt": "수조에서 헤엄치는 은빛 시마아지의 옆모습",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/shimaaji.jpg",
+        "width": 1280,
+        "height": 832
+      }
     },
     {
       "fishId": 26,
@@ -457,9 +649,17 @@
       "width": 640,
       "height": 480,
       "alt": "수조 속 어름돔의 옆모습",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
       "commercialUseConfirmed": true,
-      "qualityNote": "확인 가능한 정확한 종 실사진 중 해상도가 낮아 확대 crop을 피해야 함"
+      "qualityNote": "확인 가능한 정확한 종 실사진 중 해상도가 낮아 확대 crop을 피해야 함",
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/eoreumdom.jpg",
+        "width": 640,
+        "height": 480
+      }
     },
     {
       "fishId": 27,
@@ -476,8 +676,16 @@
       "width": 1280,
       "height": 960,
       "alt": "흰 배경에 놓인 점성어 표본의 옆모습",
-      "focalPoint": { "x": 0.5, "y": 0.5 },
-      "commercialUseConfirmed": true
+      "focalPoint": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "commercialUseConfirmed": true,
+      "hosted": {
+        "url": "https://www.fishnote.kr/fish/jeomseongeo.jpg",
+        "width": 1280,
+        "height": 960
+      }
     }
   ]
 }

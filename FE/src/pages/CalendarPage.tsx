@@ -1,6 +1,6 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Info } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import FishCard from '../components/FishCard';
 import { ErrorState, SkeletonCards } from '../components/Skeletons';
 import { useFishList } from '../hooks/useFish';
@@ -8,10 +8,26 @@ import { usePageMeta } from '../hooks/usePageMeta';
 
 const months = Array.from({ length: 12 }, (_, index) => index + 1);
 
+// "3"~"12" 정규형만 유효 — "03"·"13" 같은 값은 null로 돌려 /calendar로 폴백시킨다
+function parseMonthParam(param: string): number | null {
+  return /^([1-9]|1[0-2])$/.test(param) ? Number(param) : null;
+}
+
 export default function CalendarPage() {
-  usePageMeta('제철 캘린더', '월별로 지금 제철인 회를 한눈에 확인해보세요.');
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const { month: monthParam } = useParams();
+  const navigate = useNavigate();
+  const routeMonth = monthParam === undefined ? null : parseMonthParam(monthParam);
   const currentMonth = new Date().getMonth() + 1;
+  // 월별 딥링크(/calendar/11)가 검색·공유 랜딩이 되도록 선택 월은 URL에서 파생한다 (docs/15 M2)
+  const selectedMonth = routeMonth ?? currentMonth;
+  usePageMeta(
+    routeMonth ? `${routeMonth}월 제철 회·횟감` : '제철 캘린더',
+    routeMonth
+      ? `${routeMonth}월이 제철인 회를 모아 보여드려요. 이름·맛·가격대는 FishNote 회 도감에서.`
+      : '월별로 지금 제철인 회를 한눈에 확인해보세요.',
+    undefined,
+    routeMonth ? { canonicalPath: `/calendar/${routeMonth}` } : {},
+  );
   const activeMonthRef = useRef<HTMLButtonElement>(null);
   const {
     data: monthFishes = [],
@@ -40,6 +56,16 @@ export default function CalendarPage() {
   useLayoutEffect(() => {
     activeMonthRef.current?.scrollIntoView({ inline: 'center', block: 'nearest' });
   }, [selectedMonth]);
+
+  function selectMonth(month: number) {
+    if (month === selectedMonth) return;
+    // replace로 바꿔 12개 월을 훑어도 뒤로가기 한 번에 이전 페이지로 돌아간다
+    navigate(`/calendar/${month}`, { replace: true });
+  }
+
+  if (monthParam !== undefined && routeMonth === null) {
+    return <Navigate to="/calendar" replace />;
+  }
 
   return (
     <div className="mx-auto max-w-content px-4 pb-20 pt-9 sm:px-7">
@@ -88,7 +114,7 @@ export default function CalendarPage() {
                 key={month}
                 ref={active ? activeMonthRef : undefined}
                 type="button"
-                onClick={() => setSelectedMonth(month)}
+                onClick={() => selectMonth(month)}
                 className={[
                   'calendar-month-button flex h-[58px] min-h-11 w-[74px] min-w-11 flex-none flex-col items-center justify-center rounded-[12px] border px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 lg:w-auto',
                   active

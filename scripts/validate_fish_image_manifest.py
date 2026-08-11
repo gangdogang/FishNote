@@ -52,6 +52,7 @@ ALLOWED_LICENSES = {
 
 ALLOWED_IMAGE_HOSTS = {"upload.wikimedia.org", "www.nifs.go.kr"}
 ALLOWED_SOURCE_HOSTS = {"commons.wikimedia.org", "www.nifs.go.kr"}
+HOSTED_IMAGE_ORIGIN = "https://www.fishnote.kr"
 
 
 def require_text(item: dict, field: str, errors: list[str]) -> str:
@@ -152,6 +153,18 @@ def validate_manifest(manifest: dict) -> list[str]:
                     value = focal.get(axis)
                     if not isinstance(value, (int, float)) or isinstance(value, bool) or not 0 <= value <= 1:
                         errors.append(f"fish {fish_id}: focalPoint.{axis} must be within 0..1")
+            # docs/15 M3: 자체 호스팅 사본. 원본 url·출처 필드는 그대로 두고 추가로만 기록한다.
+            hosted = item.get("hosted")
+            if not isinstance(hosted, dict):
+                errors.append(f"fish {fish_id}: READY media requires a hosted copy (docs/15 M3)")
+            else:
+                expected_hosted_url = f"{HOSTED_IMAGE_ORIGIN}/fish/{item.get('slug')}.jpg"
+                if hosted.get("url") != expected_hosted_url:
+                    errors.append(f"fish {fish_id}: hosted.url must be {expected_hosted_url}")
+                for field in ("width", "height"):
+                    value = hosted.get(field)
+                    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                        errors.append(f"fish {fish_id}: hosted.{field} must be a positive integer")
         elif status == "BLOCKED":
             blocked_count += 1
             require_text(item, "reason", errors)

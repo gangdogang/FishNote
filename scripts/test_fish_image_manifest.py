@@ -41,6 +41,15 @@ class FishImageManifestTest(unittest.TestCase):
         broken["items"][1]["fishId"] = broken["items"][0]["fishId"]
         self.assertTrue(any("duplicate fishId" in error for error in validate_manifest(broken)))
 
+    def test_ready_media_requires_matching_hosted_copy(self):
+        broken = copy.deepcopy(self.manifest)
+        del broken["items"][0]["hosted"]
+        self.assertTrue(any("requires a hosted copy" in error for error in validate_manifest(broken)))
+
+        broken = copy.deepcopy(self.manifest)
+        broken["items"][0]["hosted"]["url"] = "https://cdn.example.com/fish/gwangeo.jpg"
+        self.assertTrue(any("hosted.url must be" in error for error in validate_manifest(broken)))
+
     def test_noncommercial_or_unsafe_media_is_rejected(self):
         broken = copy.deepcopy(self.manifest)
         broken["items"][0]["license"] = "CC BY-NC 4.0"

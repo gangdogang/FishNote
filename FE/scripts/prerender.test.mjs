@@ -14,6 +14,7 @@ const fixedPublicPages = [
   ['/privacy', '개인정보처리방침'],
   ['/terms', '이용약관'],
 ];
+const calendarMonths = Array.from({ length: 12 }, (_, index) => index + 1);
 
 test('every public fish has crawlable prerendered HTML', async () => {
   for (const fish of catalog) {
@@ -43,6 +44,21 @@ test('every fixed public sitemap route has its own crawlable HTML', async () => 
   }
 });
 
+test('every calendar month page lists its in-season fish for crawlers', async () => {
+  for (const month of calendarMonths) {
+    const html = await readFile(resolve(distRoot, 'calendar', String(month), 'index.html'), 'utf8');
+    const inSeason = catalog.filter((fish) => fish.seasonMonths.includes(month));
+    assert.match(html, new RegExp(`<title>${month}월 제철 회·횟감 \\| FishNote</title>`));
+    assert.match(html, new RegExp(`<h1>${month}월 제철 회</h1>`));
+    assert.match(html, new RegExp(`rel="canonical" href="https://www\\.fishnote\\.kr/calendar/${month}"`));
+    assert.match(html, /"@type":"ItemList"/);
+    assert.match(html, /"@type":"BreadcrumbList"/);
+    const links = [...html.matchAll(/<li><a href="\/fish\/([^"]+)">/g)];
+    assert.equal(links.length, inSeason.length, `month ${month} in-season fish list`);
+    assert.deepEqual(new Set(links.map((match) => match[1])), new Set(inSeason.map((fish) => fish.slug)));
+  }
+});
+
 test('sitemap public fish URL count matches the catalog exactly', async () => {
   const sitemap = await readFile(resolve(distRoot, 'sitemap.xml'), 'utf8');
   const fishUrls = [...sitemap.matchAll(/<loc>https:\/\/www\.fishnote\.kr\/fish\/([^<]+)<\/loc>/g)];
@@ -51,6 +67,10 @@ test('sitemap public fish URL count matches the catalog exactly', async () => {
 
   for (const [path] of fixedPublicPages) {
     assert.match(sitemap, new RegExp(`<loc>https://www\\.fishnote\\.kr${path}</loc>`));
+  }
+
+  for (const month of calendarMonths) {
+    assert.match(sitemap, new RegExp(`<loc>https://www\\.fishnote\\.kr/calendar/${month}</loc>`));
   }
 });
 

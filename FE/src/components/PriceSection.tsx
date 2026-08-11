@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { normalizePriceTrendPoints } from '../lib/priceTrend';
+import { hasCollectedPrices as summaryHasCollectedPrices, shouldHidePriceSection } from '../lib/priceSummary';
 import type {
   FishPriceObservation,
   FishPriceSummary,
@@ -44,16 +45,7 @@ export default function PriceSection({
   const views = useMemo(() => createPriceViews(summary), [summary]);
   const selected = views.find((view) => view.key === selectedKey) ?? views[0];
   const hasSummary = summary !== undefined;
-  const hasCollectedPrices = Boolean(
-    summary
-      && (
-        summary.observationCount > 0
-        || summary.latest
-        || summary.recent.length > 0
-        || summary.byShop.length > 0
-        || views.some((view) => view.points.length > 0)
-      ),
-  );
+  const hasCollectedPrices = summaryHasCollectedPrices(summary);
   const showInitialLoading = isLoading && !hasSummary;
   const showInitialError = isError && !hasSummary;
   const showUnavailable = !hasSummary && !isLoading && !isError;
@@ -67,6 +59,11 @@ export default function PriceSection({
         variantKey: key.startsWith('variant:') ? key.slice('variant:'.length) : key,
       });
     }
+  }
+
+  // 관측 0건이 확정된 어종은 섹션 자체를 접는다 — 상세 탭도 같은 조건으로 숨겨진다(FishDetailPage).
+  if (shouldHidePriceSection(summary, isError)) {
+    return null;
   }
 
   return (

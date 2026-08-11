@@ -185,9 +185,31 @@ function fixedPageMarkup(page) {
   return `<main><nav aria-label="경로"><a href="/">FishNote</a> / <span>${escapeHtml(page.heading)}</span></nav><article><h1>${escapeHtml(page.heading)}</h1><p>${escapeHtml(page.description)}</p>${sections}<p><a href="/">전체 회 도감 둘러보기</a></p></article></main>`;
 }
 
+const calendarMonths = Array.from({ length: 12 }, (_, index) => index + 1);
+
+function monthFishes(catalog, month) {
+  return catalog.filter((fish) => fish.seasonMonths.includes(month));
+}
+
+function monthDescription(month, count) {
+  return `${month}월이 제철인 회 ${count}종을 확인하세요. 이름·맛·가격대는 FishNote 회 도감에서.`;
+}
+
+function monthMarkup(month, fishes) {
+  const items = fishes
+    .map((fish) => `<li><a href="/fish/${escapeHtml(fish.slug)}">${escapeHtml(fish.name)}</a> — ${escapeHtml(fish.description)}</li>`)
+    .join('');
+  const otherMonths = calendarMonths
+    .filter((other) => other !== month)
+    .map((other) => `<a href="/calendar/${other}">${other}월</a>`)
+    .join(' ');
+  return `<main><nav aria-label="경로"><a href="/">FishNote</a> / <a href="/calendar">제철 캘린더</a> / <span>${month}월</span></nav><article><h1>${month}월 제철 회</h1><p>${escapeHtml(monthDescription(month, fishes.length))}</p><ul>${items}</ul><nav aria-label="다른 달 제철 회"><h2>다른 달 제철 회 보기</h2><p>${otherMonths}</p></nav></article></main>`;
+}
+
 function sitemap(catalog) {
   const fixedPaths = ['/', ...fixedPublicPages.map((page) => page.path)];
-  const paths = [...fixedPaths, ...catalog.map((fish) => `/fish/${fish.slug}`)];
+  const monthPaths = calendarMonths.map((month) => `/calendar/${month}`);
+  const paths = [...fixedPaths, ...monthPaths, ...catalog.map((fish) => `/fish/${fish.slug}`)];
   const urls = paths
     .map((path) => `  <url><loc>${escapeXml(new URL(path, siteUrl).toString())}</loc></url>`)
     .join('\n');
@@ -249,6 +271,49 @@ for (const page of fixedPublicPages) {
   await writeFile(resolve(directory, 'index.html'), html, 'utf8');
 }
 
+for (const month of calendarMonths) {
+  const fishes = monthFishes(catalog, month);
+  const canonical = new URL(`/calendar/${month}`, siteUrl).toString();
+  const description = monthDescription(month, fishes.length);
+  const image = fishes[0]?.imageUrl || defaultImage;
+  const structuredData = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'FishNote', item: homeCanonical },
+        { '@type': 'ListItem', position: 2, name: '제철 캘린더', item: new URL('/calendar', siteUrl).toString() },
+        { '@type': 'ListItem', position: 3, name: `${month}월 제철 회`, item: canonical },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ItemList',
+      name: `${month}월 제철 회`,
+      numberOfItems: fishes.length,
+      itemListElement: fishes.map((fish, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: fish.name,
+        url: new URL(`/fish/${fish.slug}`, siteUrl).toString(),
+      })),
+    },
+  ];
+  const html = withStaticRoot(
+    withMetadata(template, {
+      title: `${month}월 제철 회·횟감 | FishNote`,
+      description,
+      canonical,
+      image,
+    }),
+    monthMarkup(month, fishes),
+    structuredData,
+  );
+  const directory = resolve(distRoot, 'calendar', String(month));
+  await mkdir(directory, { recursive: true });
+  await writeFile(resolve(directory, 'index.html'), html, 'utf8');
+}
+
 for (const fish of catalog) {
   const canonical = new URL(`/fish/${fish.slug}`, siteUrl).toString();
   const description = `${fish.description}. ${seasonSummary(fish.seasonMonths)} FishNote에서 맛과 가격 정보도 확인하세요.`;
@@ -298,4 +363,4 @@ const noindexHtml = withMetadata(template, {
 await writeFile(resolve(distRoot, 'spa-noindex.html'), noindexHtml, 'utf8');
 await writeFile(resolve(distRoot, 'sitemap.xml'), sitemap(catalog), 'utf8');
 
-console.log(`prerendered ${catalog.length} fish pages, ${fixedPublicPages.length} fixed pages, and generated sitemap.xml`);
+console.log(`prerendered ${catalog.length} fish pages, ${fixedPublicPages.length} fixed pages, ${calendarMonths.length} month pages, and generated sitemap.xml`);

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../components/Toast';
 import { AuthProvider } from '../hooks/useAuth';
@@ -10,7 +10,12 @@ import CalendarPage from './CalendarPage';
 
 const scrollIntoView = vi.fn();
 
-function renderCalendar() {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-probe">{location.pathname}</output>;
+}
+
+function renderCalendar(initialPath = '/calendar') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -22,8 +27,11 @@ function renderCalendar() {
       <ToastProvider>
         <AuthProvider>
           <BookmarkProvider>
-            <MemoryRouter>
-              <CalendarPage />
+            <MemoryRouter initialEntries={[initialPath]}>
+              <Routes>
+                <Route path="/calendar/:month?" element={<CalendarPage />} />
+              </Routes>
+              <LocationProbe />
             </MemoryRouter>
           </BookmarkProvider>
         </AuthProvider>
@@ -109,4 +117,55 @@ describe('CalendarPage month rail', () => {
       .toHaveAttribute('href', '/sources');
   });
 
+});
+
+describe('CalendarPage 월 딥링크 (docs/15 M2)', () => {
+  beforeEach(() => {
+    scrollIntoView.mockReset();
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: scrollIntoView,
+    });
+  });
+
+  it('/calendar/11 직접 진입 시 11월을 선택하고 월별 제목을 설정한다', () => {
+    renderCalendar('/calendar/11');
+
+    expect(monthButton(11)).toHaveAttribute('aria-current', 'date');
+    expect(screen.getByRole('heading', { level: 2, name: /^11월 제철/ })).toBeInTheDocument();
+    expect(document.title).toBe('11월 제철 회·횟감 | FishNote');
+  });
+
+  it('/calendar는 현재 월을 보여주고 기본 제목을 유지한다', () => {
+    renderCalendar('/calendar');
+
+    const currentMonth = new Date().getMonth() + 1;
+    expect(monthButton(currentMonth)).toHaveAttribute('aria-current', 'date');
+    expect(document.title).toBe('제철 캘린더 | FishNote');
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(/^\/calendar$/);
+  });
+
+  it('월 버튼 클릭 시 URL을 /calendar/N으로 교체한다', async () => {
+    const user = userEvent.setup();
+    renderCalendar('/calendar');
+    const currentMonth = new Date().getMonth() + 1;
+    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+
+    await user.click(monthButton(nextMonth));
+
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(`/calendar/${nextMonth}`);
+    expect(monthButton(nextMonth)).toHaveAttribute('aria-current', 'date');
+    expect(document.title).toBe(`${nextMonth}월 제철 회·횟감 | FishNote`);
+  });
+
+  it('범위 밖·비정규 월은 /calendar로 폴백한다', () => {
+    const { unmount } = renderCalendar('/calendar/13');
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(/^\/calendar$/);
+    unmount();
+
+    renderCalendar('/calendar/03');
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(/^\/calendar$/);
+    const currentMonth = new Date().getMonth() + 1;
+    expect(monthButton(currentMonth)).toHaveAttribute('aria-current', 'date');
+  });
 });

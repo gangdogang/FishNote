@@ -200,7 +200,7 @@ test('review 500 keeps detail, price, and review form usable, then retries only 
   await expect(priceSection).toBeVisible();
 });
 
-test('a successful zero-observation price response keeps the section and exact empty copy', async ({ page }, testInfo) => {
+test('a successful zero-observation price response hides the price section and its tab', async ({ page }, testInfo) => {
   await prepareDetail(page, testInfo);
   await page.route('**/api/v1/fish**', async (route) => {
     const requestUrl = new URL(route.request().url());
@@ -214,11 +214,13 @@ test('a successful zero-observation price response keeps the section and exact e
   await page.goto('/fish/1', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { level: 1, name: '광어' })).toBeVisible();
-  const priceSection = page.locator('#price-section');
-  await expect(priceSection.getByRole('heading', { level: 2, name: '가격 현황' })).toBeVisible();
-  await expect(priceSection.getByText('최근 14일 · 0건', { exact: true })).toBeVisible();
-  await expect(priceSection.getByText('아직 수집된 시세가 없습니다', { exact: true })).toBeVisible();
-  await expect(priceSection.getByRole('button', { name: '가격 다시 시도' })).toHaveCount(0);
+  // 성공 응답인데 관측 0건이면 빈 선반 대신 섹션과 탭을 통째로 숨긴다 (docs/15 M1)
+  const sectionNav = page.getByRole('navigation', { name: '횟감 상세 바로가기' });
+  await expect(sectionNav.getByRole('link', { name: '맛·제철' })).toBeVisible();
+  await expect(page.locator('#price-section')).toHaveCount(0);
+  await expect(sectionNav.getByRole('link', { name: '가격' })).toHaveCount(0);
+  // 히어로의 정적 가격대 요약은 유지된다
+  await expect(page.getByRole('term').filter({ hasText: '최근 가격' })).toBeVisible();
 });
 
 test('SPA navigation to another fish clears the previous review draft', async ({ page }, testInfo) => {
