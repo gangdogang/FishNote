@@ -234,3 +234,73 @@ node scripts/ops/check_fish_media_urls.mjs
 
 검사는 26개 이미지가 이미지 MIME 타입으로 응답하는지, 26개 출처 페이지가 성공 상태로
 응답하는지를 확인한다. crop과 어종 식별의 적절성은 별도의 사람 검수를 대체하지 않는다.
+
+## 11. 무료 티어 예산과 DB 유휴 정책
+
+이 서비스는 전부 무료 티어 위에서 돈다. 무료 티어의 제약은 성능이 아니라 **한도**이고,
+한도를 넘기면 성능이 나빠지는 게 아니라 **서비스가 정지한다**. 특히 Neon은 compute time을
+초과하면 Postgres가 인증 단계에서 연결을 거부하므로, 애플리케이션은 Flyway migrate에서
+실패해 기동조차 못 한다.
+
+### 11.1 한도
+
+| 서비스 | 플랜 | 한도 | 초과 시 |
+| --- | --- | --- | --- |
+| Neon | Free | **100 compute hours / 프로젝트 / 월** (매월 1일 리셋) | Postgres 연결 거부 → 앱 기동 실패 |
+| Render | Free | 512MB RAM, 15분 무접속 시 spin down | 첫 요청 50초+ 지연. 메모리·CPU 지표는 유료 전용 |
+| UptimeRobot | Free | 5분 간격 체크 | — |
+
+Neon의 scale-to-zero는 **5분**이다. 이 숫자가 아래 규칙의 근거다.
+
+### 11.2 DB를 깨우는 것을 전부 파악하고 있을 것
+
+무료 예산이 터지는 경로는 트래픽이 아니라 **주기적으로 DB를 두드리는 자동화**다.
+5분보다 짧은 간격으로 DB에 접근하는 것이 하나라도 있으면 compute는 영구히 깨어 있고
+월 720시간을 소비한다. 10분 간격이어도 가동률 50%(월 약 360시간)로 한도를 넘긴다.
+
+현재 DB를 깨우는 것은 다음뿐이다. **여기에 무언가를 추가하기 전에 월 compute 시간을 계산할 것.**
+
+| 주체 | 주기 | DB 접근 |
+| --- | --- | --- |
+| `ImageAssetCleanupJob` (`@Scheduled`) | `IMAGE_CLEANUP_INTERVAL` = **PT6H** (Render 환경변수) | O — 매 실행 `claimBatch` 쿼리 |
+| 실제 사용자 트래픽 | — | O |
+| UptimeRobot | 5분 | **X** — `/api/v1/health`는 liveness 전용 |
+| `.github/workflows/keep-warm.yml` | KST 08~24시 30분 간격 | **X** — `/health`만 호출 |
+
+`IMAGE_CLEANUP_INTERVAL`의 코드 기본값은 `PT10M`이다. 이 값으로 두면 하루 144회 DB를
+깨워 그것만으로 월 한도를 거의 소진한다. **Render 환경변수 설정이 사라지면 재발한다.**
+
+### 11.3 keep-warm에서 DB를 건드리지 않는다
+
+Render를 깨우는 것과 Neon을 깨우는 것은 분리해야 한다. `/api/v1/health`는 liveness
+전용이라 DB를 건드리지 않으므로, Render 인스턴스만 깨우면서 Neon compute는 전혀 쓰지
+않는다. DB 콜드 스타트 약 1초를 아끼자고 keep-warm에 DB 조회를 넣으면 그 1초를 아끼려다
+DB를 통째로 정지시킨다 (11.5 참고).
+
+### 11.4 점검
+
+| 확인할 것 | 위치 |
+| --- | --- |
+| Neon compute 사용량 | Neon Console → Billing. `Usage since <월 1일>`의 CU-hrs를 100과 비교 |
+| Render 환경변수 | Render → 서비스 → Environment. `IMAGE_CLEANUP_INTERVAL`이 남아 있는지 |
+| UptimeRobot 감시 URL | UptimeRobot → 모니터. `/api/v1/health`인지 (DB 접근 엔드포인트면 즉시 교체) |
+| 앱 기동 실패 원인 | Render → Logs. `exceeded the compute time quota`면 Neon 한도 |
+
+Render 무료 티어는 메모리·CPU 지표를 제공하지 않는다. `Exited with status 1`만 보고
+OOM으로 단정하지 말고 **애플리케이션 로그의 스택트레이스를 먼저 확인한다.**
+
+### 11.5 사고 기록 — 2026-08 Neon compute 한도 소진
+
+- **증상**: 2026-08-19 07:26 KST부터 백엔드 다운. Render 인스턴스가 2~4분마다
+  `Exited with status 1`로 재시작. TCP 연결과 TLS는 되지만 HTTP 응답이 0바이트.
+- **직접 원인**: Neon compute 110.22 / 100 CU-hrs 초과 → Postgres가 인증 단계에서 연결
+  거부 → `FlywayMigrationInitializer`에서 기동 실패.
+- **근본 원인**: DB를 10분마다 깨우는 것이 두 개 있었다. `ImageAssetCleanupJob`(기본
+  `PT10M`)과 keep-warm 워크플로의 `/fish?month=1` 호출. scale-to-zero 5분보다 짧은
+  실효 주기라 compute가 상시 가동됐다.
+- **증폭**: 앱이 죽자 keep-warm의 헬스체크도 실패했고, `curl -fsS`가 job을 실패시켜
+  10분마다 실패 알림이 발송됐다. 알림의 원인과 다운의 원인이 같았다.
+- **조치**: keep-warm에서 DB 워밍 제거 + 실패해도 job을 실패시키지 않도록 변경(#35),
+  `IMAGE_CLEANUP_INTERVAL=PT6H` 설정(하루 144회 → 4회).
+- **교훈**: 콜드 스타트 회피는 가용성 개선처럼 보이지만, 유휴 과금 모델에서는 **예산 소모**다.
+  아끼려는 지연(1초)과 잃을 수 있는 것(서비스 전면 정지)의 크기를 먼저 비교한다.
