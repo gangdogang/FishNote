@@ -301,6 +301,8 @@ PRERENDER_API_BASE_URL=https://<render-service>.onrender.com/api/v1
   `.github/workflows/keep-warm.yml`은 KST 08~24시에만 도는 **백업**이고, 핑이 실패해도 job을 실패시키지 않습니다.
   저장소 변수 `KEEP_WARM_BASE_URL`로 대상을 바꾸고, `KEEP_WARM_ENABLED=false`로 끌 수 있습니다.
 - Neon 무료 티어도 유휴 시 잠들어 첫 DB 쿼리가 ~1초 느릴 수 있습니다.
+  Neon은 월 100 compute hours가 한도이고 넘기면 Postgres가 연결을 거부해 서버가 기동하지 못합니다.
+  주기적으로 DB를 깨우는 것을 추가하기 전에 [`docs/OPERATIONS.md`](docs/OPERATIONS.md) §11을 먼저 읽으세요.
 
 ## 운영 팁
 
