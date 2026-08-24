@@ -7,6 +7,8 @@ name: Keep backend warm
 # 백업이므로 핑이 실패해도 job을 실패시키지 않는다. 다운 알림은 UptimeRobot이 보내고,
 # 여기서는 warning 주석과 job summary로만 남긴다 — Actions 탭과 메일함이 빨간 X로
 # 도배되던 문제(10분마다 실패 알림)를 막기 위한 것이다.
+#
+# 그리고 DB는 건드리지 않는다. liveness 엔드포인트만 친다. 이유는 아래 주석 참고.
 
 on:
   schedule:
@@ -67,14 +69,14 @@ jobs:
             return 1
           }
 
+          # /health는 liveness 전용이라 DB를 건드리지 않는다. 이게 핵심이다.
+          #
+          # 이전 버전은 DB를 데우겠다고 /fish?month=N을 같이 호출했는데, 그게 Neon
+          # 무료 티어 compute time을 통째로 태워 2026-08 한도를 소진시켰다. 그 결과
+          # Postgres가 인증 단계에서 연결을 거부했고, Flyway migrate가 실패하면서
+          # 애플리케이션이 기동 자체를 못 하고 status 1로 죽는 루프에 빠졌다.
+          # DB 콜드 스타트 ~1초를 아끼려다 DB를 통째로 죽인 셈이라, DB 워밍은 없앤다.
           wake "health" "$BASE_URL/health" || status=1
-
-          # /health는 liveness 전용이라 DB를 건드리지 않는다. Neon 무료 티어도 유휴 시
-          # 잠들므로, 살아 있을 때만 실제 조회를 한 번 태워 커넥션까지 데운다.
-          if [ "$status" -eq 0 ]; then
-            month=$(TZ=Asia/Seoul date +%-m)
-            wake "catalog (month=$month)" "$BASE_URL/fish?month=$month" || status=1
-          fi
 
           {
             echo "### Keep-warm (백업 · 주 모니터링은 UptimeRobot)"
