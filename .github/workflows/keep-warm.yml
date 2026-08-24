@@ -1,11 +1,19 @@
 name: Keep backend warm
 
-# Render 무료 웹서비스는 약 15분간 무접속 시 잠들어, 첫 요청이 30~60초 걸립니다.
-# 10분마다 헬스체크를 호출해 백엔드를 깨어 있게 유지합니다.
+# 주 keep-warm 주체는 UptimeRobot(5분 간격)이다. 무료 저장소의 GitHub 예약 작업은
+# 10분으로 설정해도 실제로는 1.5~4시간에 한 번만 도는 일이 있어(docs/HISTORY.md §8)
+# 여기서는 백업 역할만 맡는다.
+#
+# 백업이므로 핑이 실패해도 job을 실패시키지 않는다. 다운 알림은 UptimeRobot이 보내고,
+# 여기서는 warning 주석과 job summary로만 남긴다 — Actions 탭과 메일함이 빨간 X로
+# 도배되던 문제(10분마다 실패 알림)를 막기 위한 것이다.
+
 on:
   schedule:
-    - cron: "*/10 * * * *"   # 10분마다 (UTC 기준이지만 간격은 동일)
-  workflow_dispatch: {}       # 필요하면 수동 실행
+    # KST 08:00~24:00 = UTC 23:00~15:00 구간에만 돈다. 심야에는 재워서 무료 컴퓨트를 아낀다.
+    # 정각은 예약 작업이 몰려 더 밀리므로 :07, :37로 비켜 둔다.
+    - cron: "7,37 23,0-14 * * *"
+  workflow_dispatch: {}
 
 permissions: {}
 
@@ -13,21 +21,74 @@ concurrency:
   group: keep-backend-warm
   cancel-in-progress: true
 
+env:
+  # 서버를 옮겨도 저장소 변수만 바꾸면 된다. 미설정 시 운영 도메인을 쓴다.
+  BASE_URL: ${{ vars.KEEP_WARM_BASE_URL || 'https://api.fishnote.kr/api/v1' }}
+
 jobs:
   ping:
+    # 저장소 변수 KEEP_WARM_ENABLED=false 로 파일 삭제 없이 끌 수 있다.
+    if: ${{ vars.KEEP_WARM_ENABLED != 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Ping health endpoint
-        run: |
-          curl -fsS --max-time 60 https://api.fishnote.kr/api/v1/health
+    timeout-minutes: 10
 
-      # Neon 무료 티어도 유휴 시 잠들어 첫 쿼리가 느려진다.
-      # 한국 활동 시간대(KST 08~24시 = UTC 23~14시)에만 DB까지 깨워두고,
-      # 심야에는 재워서 무료 컴퓨트 시간을 아낀다.
-      - name: Warm DB during KST daytime
+    steps:
+      - name: Wake backend and database
         run: |
-          H=$(date -u +%H)
-          if [ "$H" -ge 23 ] || [ "$H" -le 14 ]; then
-            curl -fsS --max-time 60 "https://api.fishnote.kr/api/v1/fish?month=1" > /dev/null
+          set -uo pipefail
+
+          log=$(mktemp)
+          status=0
+
+          # Render 콜드 스타트는 30~60초 걸린다. 단발 요청은 기동 경쟁에서 지기 쉬우므로
+          # 간격을 늘려가며 최대 3회 시도한다.
+          wake() {
+            label=$1
+            url=$2
+            attempt=1
+            while [ "$attempt" -le 3 ]; do
+              start=$(date +%s)
+              code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 60 "$url" || echo 000)
+              elapsed=$(( $(date +%s) - start ))
+
+              if [ "$code" = "200" ]; then
+                echo "| $label | ✅ 200 | ${attempt}회차 | ${elapsed}s |" >> "$log"
+                return 0
+              fi
+
+              if [ "$attempt" -lt 3 ]; then
+                sleep $(( attempt * 10 ))
+              fi
+              attempt=$(( attempt + 1 ))
+            done
+
+            # code 000 = 연결은 됐으나 응답이 없거나 시간 초과 (인스턴스 정지·중단 의심)
+            echo "| $label | ❌ $code | 3회 실패 | ${elapsed}s |" >> "$log"
+            return 1
+          }
+
+          wake "health" "$BASE_URL/health" || status=1
+
+          # /health는 liveness 전용이라 DB를 건드리지 않는다. Neon 무료 티어도 유휴 시
+          # 잠들므로, 살아 있을 때만 실제 조회를 한 번 태워 커넥션까지 데운다.
+          if [ "$status" -eq 0 ]; then
+            month=$(TZ=Asia/Seoul date +%-m)
+            wake "catalog (month=$month)" "$BASE_URL/fish?month=$month" || status=1
           fi
+
+          {
+            echo "### Keep-warm (백업 · 주 모니터링은 UptimeRobot)"
+            echo
+            echo "대상: \`$BASE_URL\`"
+            echo
+            echo "| 엔드포인트 | 결과 | 시도 | 소요 |"
+            echo "| --- | --- | --- | --- |"
+            cat "$log"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$status" -ne 0 ]; then
+            echo "::warning title=Keep-warm 실패::$BASE_URL 이(가) 응답하지 않습니다. Render 인스턴스 상태와 UptimeRobot 알림을 확인하세요."
+          fi
+
+          # 백업 작업이므로 항상 성공으로 끝낸다 — 실패 알림은 UptimeRobot 담당.
+          exit 0
