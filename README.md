@@ -296,7 +296,10 @@ PRERENDER_API_BASE_URL=https://<render-service>.onrender.com/api/v1
 
 ### 무료 티어 참고
 
-- Render 무료 인스턴스는 15분 무접속 시 잠듭니다 → `.github/workflows/keep-warm.yml`이 10분마다 헬스체크로 깨워둡니다.
+- Render 무료 인스턴스는 15분 무접속 시 잠듭니다 → **UptimeRobot**(5분 간격)이 헬스체크로 깨워둡니다.
+  GitHub 예약 작업은 무료 저장소에서 수 시간까지 밀리므로(docs/HISTORY.md §8)
+  `.github/workflows/keep-warm.yml`은 KST 08~24시에만 도는 **백업**이고, 핑이 실패해도 job을 실패시키지 않습니다.
+  저장소 변수 `KEEP_WARM_BASE_URL`로 대상을 바꾸고, `KEEP_WARM_ENABLED=false`로 끌 수 있습니다.
 - Neon 무료 티어도 유휴 시 잠들어 첫 DB 쿼리가 ~1초 느릴 수 있습니다.
 
 ## 운영 팁
